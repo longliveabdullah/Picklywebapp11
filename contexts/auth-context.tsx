@@ -74,17 +74,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserData = async (userId: string, email: string) => {
     try {
-      // Try to get existing user data
-      let userData
-      try {
-        userData = await DatabaseService.getUser(userId)
-      } catch (error) {
+      // Get user and profile data in parallel
+      const [userResult, profileData] = await Promise.all([
+        DatabaseService.getUser(userId).catch(() => null), // Return null if user doesn't exist
+        DatabaseService.getUserProfile(userId),
+      ])
+
+      let userData = userResult
+      if (!userData) {
         // User doesn't exist in our database, create them
         console.log("Creating new user in database:", email)
         userData = await DatabaseService.createUser(email, userId)
       }
-
-      const profileData = await DatabaseService.getUserProfile(userId)
 
       setUser({
         id: userData.id,
@@ -228,17 +229,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return
 
     try {
+      const updatePromises: Promise<unknown>[] = []
+
       if (updates.onboardingComplete !== undefined) {
-        await DatabaseService.updateUser(user.id, {
-          onboarding_complete: updates.onboardingComplete,
-        })
+        updatePromises.push(
+          DatabaseService.updateUser(user.id, {
+            onboarding_complete: updates.onboardingComplete,
+          }),
+        )
       }
 
       if (updates.profile) {
-        await updateUserProfile(updates.profile)
+        updatePromises.push(updateUserProfile(updates.profile))
       }
 
-      // Reload user data
+      await Promise.all(updatePromises)
+
+      // Reload user data once after all updates are done
       await loadUserData(user.id, user.email)
     } catch (error) {
       console.error("Update user error:", error)
@@ -251,7 +258,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       await DatabaseService.updateUserProfile(user.id, profile)
-      await loadUserData(user.id, user.email)
     } catch (error) {
       console.error("Update user profile error:", error)
       throw error
