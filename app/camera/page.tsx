@@ -288,11 +288,14 @@ export default function CameraPage() {
       return
     }
 
-    console.log("📁 Triggering file input click")
-    fileInputRef.current?.click()
+    if (fileInputRef.current) {
+      fileInputRef.current.removeAttribute("capture")
+      console.log("📁 Triggering file input click")
+      fileInputRef.current.click()
+    }
   }
 
-  const handleCameraCapture = async () => {
+  const handleCameraCapture = () => {
     console.log("📷 Camera capture button clicked")
 
     if (!user) {
@@ -314,33 +317,9 @@ export default function CameraPage() {
       return
     }
 
-    try {
-      console.log("📷 Requesting camera access...")
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment", // Use back camera on mobile
-        },
-      })
-
-      // For now, we'll simulate camera capture since implementing a full camera UI is complex
-      // In a real app, you would create a video element, capture frame, and convert to image
-      console.log("📷 Camera access granted")
-
-      toast({
-        title: "Camera Access Granted",
-        description: "Camera functionality is being implemented. Please use 'Upload from Gallery' for now.",
-      })
-
-      // Stop the camera stream
-      stream.getTracks().forEach((track) => track.stop())
-    } catch (error) {
-      console.error("❌ Camera error:", error)
-      toast({
-        title: "Camera Error",
-        description: "Unable to access camera. Please try uploading an image instead.",
-        variant: "destructive",
-      })
-      setError("Unable to access camera. Please try uploading an image instead.")
+    if (fileInputRef.current) {
+      fileInputRef.current.setAttribute("capture", "environment")
+      fileInputRef.current.click()
     }
   }
 
