@@ -154,29 +154,6 @@ export default function OnboardingWeightPage() {
         </Card>
       </motion.div>
 
-      {/* Completion Message */}
-      <motion.div
-        className="text-center p-6 bg-gradient-to-r from-pickly-teal/10 via-pickly-green/10 to-pickly-pink/10 backdrop-blur-sm rounded-xl border border-white/20"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-      >
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            rotate: [0, 5, -5, 0],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        >
-          <Sparkles className="h-8 w-8 text-pickly-teal mx-auto mb-3" />
-        </motion.div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">Almost there!</h3>
-        <p className="text-sm text-gray-600">Complete your profile to get personalized product recommendations</p>
-      </motion.div>
     </div>
   )
 }
