@@ -7,7 +7,6 @@ import { motion } from "framer-motion"
 import { Users, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { OnboardingLayout } from "@/components/onboarding-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import type { UserProfile } from "@/types"
@@ -62,120 +61,118 @@ export default function OnboardingGenderPage() {
   }
 
   return (
-    <OnboardingLayout>
-      <div className="space-y-8">
-        {/* Header */}
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.div
+        className="text-center space-y-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
         <motion.div
-          className="text-center space-y-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          className="w-16 h-16 bg-gradient-to-r from-pickly-purple to-pickly-blue rounded-full mx-auto flex items-center justify-center mb-4"
+          animate={{
+            rotate: [0, 5, -5, 0],
+            scale: [1, 1.05, 1],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "easeInOut",
+          }}
         >
-          <motion.div
-            className="w-16 h-16 bg-gradient-to-r from-pickly-purple to-pickly-blue rounded-full mx-auto flex items-center justify-center mb-4"
-            animate={{
-              rotate: [0, 5, -5, 0],
-              scale: [1, 1.05, 1],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }}
-          >
-            <Users className="h-8 w-8 text-white" />
-          </motion.div>
-
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal bg-clip-text text-transparent">
-            What is your gender?
-          </h1>
-          <p className="text-gray-600 font-medium">This helps us provide more relevant product recommendations</p>
+          <Users className="h-8 w-8 text-white" />
         </motion.div>
 
-        {/* Form Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <Card className="backdrop-blur-lg bg-white/80 border-0 shadow-xl">
-            <CardContent className="p-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid gap-3">
-                  {genderOptions.map((option, index) => (
-                    <motion.div
-                      key={option.value}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + index * 0.1 }}
-                    >
-                      <Button
-                        type="button"
-                        variant={gender === option.value ? "default" : "outline"}
-                        className={`w-full h-16 text-left justify-start text-lg font-semibold transition-all duration-300 rounded-xl ${
-                          gender === option.value
-                            ? "bg-gradient-to-r from-pickly-purple to-pickly-blue text-white shadow-lg scale-105"
-                            : "bg-white/60 hover:bg-white/80 border-2 border-gray-200 hover:border-pickly-purple"
-                        }`}
-                        onClick={() => setGender(option.value)}
-                        disabled={isLoading}
-                        whileHover={{ scale: gender === option.value ? 1.05 : 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <span className="text-2xl mr-4">{option.icon}</span>
-                        {option.label}
-                        {gender === option.value && (
-                          <motion.div
-                            className="ml-auto"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", stiffness: 500 }}
-                          >
-                            <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                              <div className="w-3 h-3 bg-white rounded-full" />
-                            </div>
-                          </motion.div>
-                        )}
-                      </Button>
-                    </motion.div>
-                  ))}
-                </div>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal bg-clip-text text-transparent">
+          What is your gender?
+        </h1>
+        <p className="text-gray-600 font-medium">This helps us provide more relevant product recommendations</p>
+      </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
-                  <Button
-                    type="submit"
-                    className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal hover:from-pickly-blue hover:via-pickly-teal hover:to-pickly-green transition-all duration-300 rounded-xl"
-                    disabled={isLoading || !gender}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+      {/* Form Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+      >
+        <Card className="backdrop-blur-lg bg-white/80 border-0 shadow-xl">
+          <CardContent className="p-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid gap-3">
+                {genderOptions.map((option, index) => (
+                  <motion.div
+                    key={option.value}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + index * 0.1 }}
                   >
-                    {isLoading ? (
-                      <motion.div className="flex items-center gap-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <Button
+                      type="button"
+                      variant={gender === option.value ? "default" : "outline"}
+                      className={`w-full h-16 text-left justify-start text-lg font-semibold transition-all duration-300 rounded-xl ${
+                        gender === option.value
+                          ? "bg-gradient-to-r from-pickly-purple to-pickly-blue text-white shadow-lg scale-105"
+                          : "bg-white/60 hover:bg-white/80 border-2 border-gray-200 hover:border-pickly-purple"
+                      }`}
+                      onClick={() => setGender(option.value)}
+                      disabled={isLoading}
+                      whileHover={{ scale: gender === option.value ? 1.05 : 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span className="text-2xl mr-4">{option.icon}</span>
+                      {option.label}
+                      {gender === option.value && (
                         <motion.div
-                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                        />
-                        Saving...
-                      </motion.div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        Continue
-                        <motion.div
-                          animate={{ x: [0, 5, 0] }}
-                          transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
+                          className="ml-auto"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 500 }}
                         >
-                          <ArrowRight className="h-5 w-5" />
+                          <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                            <div className="w-3 h-3 bg-white rounded-full" />
+                          </div>
                         </motion.div>
-                      </div>
-                    )}
-                  </Button>
-                </motion.div>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-    </OnboardingLayout>
+                      )}
+                    </Button>
+                  </motion.div>
+                ))}
+              </div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+                <Button
+                  type="submit"
+                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal hover:from-pickly-blue hover:via-pickly-teal hover:to-pickly-green transition-all duration-300 rounded-xl"
+                  disabled={isLoading || !gender}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {isLoading ? (
+                    <motion.div className="flex items-center gap-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      <motion.div
+                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                      />
+                      Saving...
+                    </motion.div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      Continue
+                      <motion.div
+                        animate={{ x: [0, 5, 0] }}
+                        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
+                      >
+                        <ArrowRight className="h-5 w-5" />
+                      </motion.div>
+                    </div>
+                  )}
+                </Button>
+              </motion.div>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
   )
 }
