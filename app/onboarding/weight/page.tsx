@@ -42,7 +42,7 @@ export default function OnboardingWeightPage() {
       })
 
       setTimeout(() => {
-        router.push("/home")
+        router.push("/onboarding/complete")
       }, 300)
     } catch (error) {
       toast({
