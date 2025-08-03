@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Sparkles, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Confetti } from "@/components/confetti"
 
 export default function OnboardingCompletePage() {
   const router = useRouter()
@@ -14,6 +15,7 @@ export default function OnboardingCompletePage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center">
+      <Confetti />
       <motion.div
         className="space-y-6"
         initial={{ opacity: 0, y: 20 }}
