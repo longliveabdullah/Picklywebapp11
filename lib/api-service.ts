@@ -11,9 +11,11 @@ export interface ProductAnalysisResponse {
   explanation: string
   recommendations: string[]
   productName?: string
+  brand?: string
+  category?: string
+  pros?: string[]
+  cons?: string[]
   ingredients?: string[]
-  healthScore?: number
-  suitabilityScore?: number
 }
 
 export class ApiService {
@@ -61,47 +63,54 @@ export class ApiService {
 
   private static getMockResponse(request: ProductAnalysisRequest): ProductAnalysisResponse {
     // Generate a rating based on user profile
-    const rating = Math.floor(Math.random() * 10) + 1
+    const rating = Math.floor(Math.random() * 11) // 0-10
+    const isDangerous = rating === 0
+    const isUnrecognized = Math.random() < 0.1 // 10% chance of being unrecognized
+
+    if (isUnrecognized) {
+      return {
+        rating: -1,
+        explanation: "From where did u find this thing ?",
+        productName: "Unrecognized Product",
+        recommendations: [],
+      }
+    }
 
     let explanation = "Based on your profile, this product is "
-    if (rating >= 8) {
-      explanation += "an excellent match for you. "
+    if (isDangerous) {
+      explanation = "This product is dangerous for you due to your health profile."
+    } else if (rating >= 8) {
+      explanation += "an excellent match for you."
     } else if (rating >= 5) {
-      explanation += "a good match for you, with some considerations. "
+      explanation += "a good match for you, with some considerations."
     } else {
-      explanation += "not recommended for your specific needs. "
+      explanation += "not recommended for your specific needs."
     }
 
-    // Add profile-specific details
-    if (request.userProfile.skinType) {
-      explanation += `It's suitable for your ${request.userProfile.skinType} skin type. `
-    }
+    const pros = ["Affordable price", "Widely available", "Pleasant scent"]
+    const cons = ["Contains artificial colors", "Not suitable for very dry skin"]
 
-    if (request.userProfile.hasDiabetes) {
-      explanation += "We've taken your diabetes into account in this rating. "
+    if (rating > 7) {
+      pros.push("Highly effective formula")
     }
-
-    if (request.userProfile.allergies && request.userProfile.allergies.length > 0) {
-      explanation += "We've checked for your listed allergies and found no conflicts. "
+    if (rating < 4) {
+      cons.push("May cause irritation for sensitive skin")
     }
 
     const recommendations = ["Use as directed on the packaging", "Store in a cool, dry place away from direct sunlight"]
-
     if (request.userProfile.skinType === "sensitive") {
       recommendations.push("Perform a patch test before full application")
-    }
-
-    if (rating < 5) {
-      recommendations.push("Consider alternatives better suited to your profile")
     }
 
     return {
       rating,
       explanation,
       recommendations,
-      productName: "Analyzed Product",
-      healthScore: Math.floor(Math.random() * 100),
-      suitabilityScore: rating * 10,
+      productName: "Hydrating Facial Cleanser",
+      brand: "Nivea",
+      category: "Skincare – Moisturizer",
+      pros,
+      cons,
     }
   }
 }

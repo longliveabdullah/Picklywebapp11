@@ -22,8 +22,10 @@ export type ProductRating = {
   explanation: string
   recommendations: string[]
   productName?: string
-  healthScore?: number
-  suitabilityScore?: number
+  brand?: string
+  category?: string
+  pros?: string[]
+  cons?: string[]
 }
 
 export type ScanHistoryItem = {
