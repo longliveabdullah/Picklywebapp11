@@ -187,9 +187,8 @@ export default function CameraPage() {
 
         const rating: ProductRating = {
           rating: result.rating || 5,
-          explanation: result.explanation || "Analysis completed successfully.",
-          productName: result.productName || "Analyzed Product",
-          brand: result.brand,
+          summary: result.summary || "Analysis completed successfully.",
+          brandName: result.brandName,
           category: result.category,
           pros: result.pros,
           cons: result.cons,
@@ -515,10 +514,9 @@ export default function CameraPage() {
                         </div>
                       </div>
 
-                      {productRating.productName && (
+                      {productRating.brandName && (
                         <div className="text-center">
-                          <h3 className="text-2xl font-bold">{productRating.productName}</h3>
-                          {productRating.brand && <p className="text-lg text-gray-500">Brand: {productRating.brand}</p>}
+                          <h3 className="text-2xl font-bold">{productRating.brandName}</h3>
                           {productRating.category && <p className="text-md text-gray-500">Category: {productRating.category}</p>}
                         </div>
                       )}
@@ -544,7 +542,7 @@ export default function CameraPage() {
 
                       <div className="space-y-2">
                         <h3 className="text-xl font-bold">Summary</h3>
-                        <p>{productRating.explanation}</p>
+                        <p>{productRating.summary}</p>
                       </div>
 
                       <Button onClick={resetScan} className="w-full">

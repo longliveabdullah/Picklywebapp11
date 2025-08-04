@@ -19,9 +19,8 @@ export type UserProfile = {
 
 export type ProductRating = {
   rating: number // 1-10
-  explanation: string
-  productName?: string
-  brand?: string
+  summary?: string
+  brandName?: string
   category?: string
   pros?: string[]
   cons?: string[]

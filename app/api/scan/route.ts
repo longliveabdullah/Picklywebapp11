@@ -198,15 +198,13 @@ Always respond in JSON format with the following structure: { "brandName": strin
           const parsed = JSON.parse(cleanContent)
 
           analysisResult = {
-            rating: Math.max(1, Math.min(10, Math.round(parsed.rating || 5))),
-            explanation: parsed.explanation || "Analysis completed successfully.",
-            recommendations: Array.isArray(parsed.recommendations)
-              ? parsed.recommendations.slice(0, 5)
-              : ["Use as directed"],
-            productName: parsed.productName || "Analyzed Product",
-            healthScore: Math.max(1, Math.min(100, Math.round(parsed.healthScore || 50))),
-            suitabilityScore: Math.max(1, Math.min(100, Math.round(parsed.suitabilityScore || 50))),
-            ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients : [],
+            brandName: parsed.brandName,
+            category: parsed.category,
+            rating: parsed.rating,
+            pros: parsed.pros,
+            cons: parsed.cons,
+            summary: parsed.summary,
+            ingredients: parsed.ingredients,
           }
 
           console.log("✅ Successfully parsed OpenRouter response")
@@ -229,10 +227,10 @@ Always respond in JSON format with the following structure: { "brandName": strin
     try {
       const { error: insertError } = await supabase.from("scan_history").insert({
         user_id: userId,
-        product_name: analysisResult.productName,
+        product_name: analysisResult.brandName,
         rating: analysisResult.rating,
-        explanation: analysisResult.explanation,
-        recommendations: analysisResult.recommendations,
+        explanation: analysisResult.summary,
+        recommendations: [],
         user_profile_snapshot: profile || {},
         image_url: `data:image/jpeg;base64,${imageBase64.substring(0, 100)}...`, // Store truncated for reference
       })
@@ -249,8 +247,7 @@ Always respond in JSON format with the following structure: { "brandName": strin
 
     console.log("🎉 Analysis completed successfully:", {
       rating: analysisResult.rating,
-      productName: analysisResult.productName,
-      hasRecommendations: analysisResult.recommendations.length > 0,
+      brandName: analysisResult.brandName,
     })
 
     return NextResponse.json(analysisResult)
