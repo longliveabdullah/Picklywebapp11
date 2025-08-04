@@ -187,9 +187,9 @@ export default function CameraPage() {
 
         const rating: ProductRating = {
           rating: result.rating || 5,
-          explanation: result.summary || "Analysis completed successfully.",
+          explanation: result.explanation || "Analysis completed successfully.",
           productName: result.productName || "Analyzed Product",
-          brand: result.brandName,
+          brand: result.brand,
           category: result.category,
           pros: result.pros,
           cons: result.cons,
