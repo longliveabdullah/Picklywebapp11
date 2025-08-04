@@ -187,11 +187,12 @@ export default function CameraPage() {
 
         const rating: ProductRating = {
           rating: result.rating || 5,
-          explanation: result.explanation || "Analysis completed successfully.",
-          recommendations: Array.isArray(result.recommendations) ? result.recommendations : ["Use as directed"],
+          explanation: result.summary || "Analysis completed successfully.",
           productName: result.productName || "Analyzed Product",
-          healthScore: result.healthScore,
-          suitabilityScore: result.suitabilityScore,
+          brand: result.brandName,
+          category: result.category,
+          pros: result.pros,
+          cons: result.cons,
         }
 
         setProductRating(rating)

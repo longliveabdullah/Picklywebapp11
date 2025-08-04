@@ -21,12 +21,12 @@ interface ScanRequest {
 }
 
 interface ScanResponse {
+  brandName: string
+  category: string
   rating: number
-  explanation: string
-  recommendations: string[]
-  productName: string
-  healthScore: number
-  suitabilityScore: number
+  pros: string[]
+  cons: string[]
+  summary?: string
   ingredients?: string[]
 }
 
@@ -342,51 +342,49 @@ ${parts.length > 0 ? parts.join("\n") : "No specific profile information availab
 }
 
 function generateMockResponse(profile: any): ScanResponse {
-  const rating = Math.floor(Math.random() * 10) + 1
+  const rating = Math.floor(Math.random() * 11)
+  const isDangerous = rating === 0
+  const isUnrecognized = Math.random() < 0.1
 
-  let explanation = "Based on our analysis, this product "
-  if (rating >= 8) {
-    explanation += "appears to be an excellent choice with high quality ingredients and good safety profile."
-  } else if (rating >= 5) {
-    explanation += "seems to be a decent option with some considerations to keep in mind."
-  } else {
-    explanation += "may not be the best choice due to potential concerns with ingredients or suitability."
-  }
-
-  if (profile?.skin_type) {
-    explanation += ` For your ${profile.skin_type} skin type, `
-    if (profile.skin_type === "sensitive") {
-      explanation += "we recommend patch testing before full use."
-    } else {
-      explanation += "this product should work well with proper application."
+  if (isUnrecognized) {
+    return {
+      rating: -1,
+      summary: "From where did u find this thing ?",
+      brandName: "Unrecognized",
+      category: "Unknown",
+      pros: [],
+      cons: [],
     }
   }
 
-  if (profile?.allergies && profile.allergies.length > 0) {
-    explanation += ` We've considered your known allergies (${profile.allergies.join(", ")}) in this assessment.`
+  let summary = "Based on your profile, this product is "
+  if (isDangerous) {
+    summary = "This product is dangerous for you due to your health profile."
+  } else if (rating >= 8) {
+    summary += "an excellent match for you."
+  } else if (rating >= 5) {
+    summary += "a good match for you, with some considerations."
+  } else {
+    summary += "not recommended for your specific needs."
   }
 
-  const recommendations = [
-    "Read all ingredient labels carefully",
-    "Use as directed on packaging",
-    "Store in a cool, dry place",
-  ]
+  const pros = ["Affordable price", "Widely available", "Pleasant scent"]
+  const cons = ["Contains artificial colors", "Not suitable for very dry skin"]
 
-  if (profile?.skin_type === "sensitive") {
-    recommendations.push("Perform a patch test before first use")
+  if (rating > 7) {
+    pros.push("Highly effective formula")
   }
-
-  if (rating < 5) {
-    recommendations.push("Consider alternative products better suited to your needs")
+  if (rating < 4) {
+    cons.push("May cause irritation for sensitive skin")
   }
 
   return {
     rating,
-    explanation,
-    recommendations,
-    productName: "Analyzed Product",
-    healthScore: Math.floor(Math.random() * 100) + 1,
-    suitabilityScore: rating * 10,
-    ingredients: ["Natural extracts", "Preservatives", "Active compounds"],
+    summary,
+    brandName: "Nivea",
+    category: "Skincare – Moisturizer",
+    pros,
+    cons,
+    ingredients: ["Aqua", "Glycerin", "Parfum"],
   }
 }
