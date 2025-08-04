@@ -542,7 +542,7 @@ export default function CameraPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <h3 className="text-xl font-bold">Analysis</h3>
+                        <h3 className="text-xl font-bold">Summary</h3>
                         <p>{productRating.explanation}</p>
                       </div>
 

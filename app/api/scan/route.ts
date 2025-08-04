@@ -115,30 +115,38 @@ export async function POST(request: NextRequest) {
     // Build personalized prompt
     const personalizedContext = buildPersonalizedContext(profile)
 
-    const prompt = `You are Pickly, an AI product analyst. Analyze this product image and provide a personalized rating.
+    const prompt = `You are picklyai, a product analyzer that helps users understand the health and quality of products before buying them. Always provide the following:
+
+Brand name
+Category
+A rating out of 10 (explained below)
+A detailed list of Pros and Cons (2–4 detailed bullet points each)
+The rating reflects product quality, effect on human health, and fit for the user's profile.
+
+Rating logic:
+Start at 10/10.
+Subtract points for any negative health impact, low quality, poor ingredients, or mismatch with user needs.
+If the product is unidentified or lacks enough data, rate it 0/10 and explain that it couldn’t be analyzed.
+Clearly explain the reason for the final score.
+
+Pros and cons and summary :
+Write clearly and informatively.
+Do not just list ingredients — explain how they help or harm the user.
+Use simple language that a non-expert can understand.
+If the product contains ingredients commonly used in low-quality or cheap formulations (e.g., parabens, sulfates, artificial dyes, excessive preservatives, etc.), mention this in the cons and explain that these are often used in poor-quality products.
 
 ${personalizedContext}
 
-INSTRUCTIONS:
-1. Identify the product (name, type, brand if visible)
-2. Analyze ingredients/components if visible
-3. Rate 1-10 based on user suitability and general safety
-4. Consider the user's profile information provided above
-5. Provide detailed explanation of your rating
-6. Give 3-5 specific recommendations
+IMPORTANT SAFETY RULES:
+- If the user has allergies and the product contains these allergens, rate it 0/10 and clearly state it is DANGEROUS for the user.
+- If the user has diabetes and the product has high sugar content, rate it 0/10 and explain that it is DANGEROUS for diabetic users.
+- If the product contains ingredients the user wants to avoid, lower the rating significantly and highlight this in the cons.
+- For skincare products, consider the user’s skin type. If the product is unsuitable, reduce the score and explain why.
+- For hair products, consider the user’s scalp type. If it's not appropriate, reduce the score and explain why.
 
-CRITICAL: Respond with ONLY valid JSON in this exact format:
-{
-  "rating": [1-10 integer],
-  "productName": "Product name if identifiable",
-  "explanation": "Detailed explanation considering profile information",
-  "ingredients": ["ingredient1", "ingredient2"],
-  "recommendations": ["recommendation1", "recommendation2", "recommendation3"],
-  "healthScore": [1-100 integer],
-  "suitabilityScore": [1-100 integer]
-}
+Always prioritize the user’s health and safety above all.
 
-RESPOND WITH ONLY JSON - NO OTHER TEXT.`
+Always respond in JSON format with the following structure: { "brandName": string, "category": string, "rating": number, "pros": string[], "cons": string[], "summary": string }`
 
     let analysisResult: ScanResponse
 
@@ -148,7 +156,7 @@ RESPOND WITH ONLY JSON - NO OTHER TEXT.`
         console.log("🤖 Calling OpenRouter API...")
 
         const completion = await openai.chat.completions.create({
-          model: "openai/gpt-4o-mini",
+          model: "gpt-4.1-mini",
           messages: [
             {
               role: "user",

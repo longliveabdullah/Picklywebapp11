@@ -9,7 +9,6 @@ export interface ProductAnalysisRequest {
 export interface ProductAnalysisResponse {
   rating: number
   explanation: string
-  recommendations: string[]
   productName?: string
   brand?: string
   category?: string
@@ -97,15 +96,9 @@ export class ApiService {
       cons.push("May cause irritation for sensitive skin")
     }
 
-    const recommendations = ["Use as directed on the packaging", "Store in a cool, dry place away from direct sunlight"]
-    if (request.userProfile.skinType === "sensitive") {
-      recommendations.push("Perform a patch test before full application")
-    }
-
     return {
       rating,
       explanation,
-      recommendations,
       productName: "Hydrating Facial Cleanser",
       brand: "Nivea",
       category: "Skincare – Moisturizer",

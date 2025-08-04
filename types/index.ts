@@ -20,7 +20,6 @@ export type UserProfile = {
 export type ProductRating = {
   rating: number // 1-10
   explanation: string
-  recommendations: string[]
   productName?: string
   brand?: string
   category?: string
