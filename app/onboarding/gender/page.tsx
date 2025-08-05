@@ -46,16 +46,13 @@ export default function OnboardingGenderPage() {
         },
       })
 
-      setTimeout(() => {
-        router.push("/onboarding/height")
-      }, 300)
+      router.push("/onboarding/height")
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to save your selection. Please try again.",
         variant: "destructive",
       })
-    } finally {
       setIsLoading(false)
     }
   }

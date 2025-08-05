@@ -40,17 +40,13 @@ export default function OnboardingAgePage() {
         },
       })
 
-      // Add a small delay for smooth transition
-      setTimeout(() => {
-        router.push("/onboarding/gender")
-      }, 300)
+      router.push("/onboarding/gender")
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to save your age. Please try again.",
         variant: "destructive",
       })
-    } finally {
       setIsLoading(false)
     }
   }

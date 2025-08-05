@@ -41,16 +41,13 @@ export default function OnboardingWeightPage() {
         },
       })
 
-      setTimeout(() => {
-        router.push("/onboarding/complete")
-      }, 300)
+      router.push("/onboarding/complete")
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to save your weight. Please try again.",
         variant: "destructive",
       })
-    } finally {
       setIsLoading(false)
     }
   }
