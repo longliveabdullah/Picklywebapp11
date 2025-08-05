@@ -187,11 +187,11 @@ export default function CameraPage() {
 
         const rating: ProductRating = {
           rating: result.rating || 5,
-          explanation: result.explanation || "Analysis completed successfully.",
-          recommendations: Array.isArray(result.recommendations) ? result.recommendations : ["Use as directed"],
-          productName: result.productName || "Analyzed Product",
-          healthScore: result.healthScore,
-          suitabilityScore: result.suitabilityScore,
+          summary: result.summary || "Analysis completed successfully.",
+          brandName: result.brandName,
+          category: result.category,
+          pros: result.pros,
+          cons: result.cons,
         }
 
         setProductRating(rating)
@@ -492,51 +492,64 @@ export default function CameraPage() {
                       </p>
                     </div>
                   ) : productRating ? (
+                    productRating.rating === -1 ? (
+                      <div className="text-center py-8">
+                        <h3 className="text-2xl font-bold mb-2">😕 Sorry, we couldn't analyze this product.</h3>
+                        <p className="text-gray-600">From where did u find this thing ?</p>
+                      </div>
+                    ) : (
                     <div className="space-y-4">
+                      {productRating.rating === 0 && (
+                        <Alert variant="destructive" className="bg-red-500 text-white border-red-700">
+                          <AlertCircle className="h-5 w-5 text-white" />
+                          <AlertDescription className="font-bold">
+                            ⚠️ This product is dangerous for you due to your health profile.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
                       <div className="flex items-center justify-center">
-                        <div className="relative flex h-32 w-32 items-center justify-center rounded-full border-8 border-primary">
+                        <div className={`relative flex h-32 w-32 items-center justify-center rounded-full border-8 ${getRatingColor(productRating.rating)}`}>
                           <span className="text-4xl font-bold">{productRating.rating}/10</span>
                         </div>
                       </div>
 
-                      {productRating.productName && (
+                      {productRating.brandName && (
                         <div className="text-center">
-                          <h3 className="text-xl font-bold">{productRating.productName}</h3>
+                          <h3 className="text-2xl font-bold">{productRating.brandName}</h3>
+                          {productRating.category && <p className="text-md text-gray-500">Category: {productRating.category}</p>}
                         </div>
                       )}
 
-                      <div className="space-y-2">
-                        <h3 className="text-xl font-bold">Analysis</h3>
-                        <p>{productRating.explanation}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <h3 className="text-xl font-bold">✅ Pros</h3>
+                          <ul className="list-inside list-disc space-y-1">
+                            {productRating.pros?.map((pro, index) => (
+                              <li key={index}>{pro}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-xl font-bold">❌ Cons</h3>
+                          <ul className="list-inside list-disc space-y-1">
+                            {productRating.cons?.map((con, index) => (
+                              <li key={index}>{con}</li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
 
-                      {productRating.healthScore && (
-                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                          <span className="font-medium">Health Score:</span>
-                          <span className="font-bold text-green-600">{productRating.healthScore}/100</span>
-                        </div>
-                      )}
-
-                      {productRating.suitabilityScore && (
-                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                          <span className="font-medium">Suitability Score:</span>
-                          <span className="font-bold text-blue-600">{productRating.suitabilityScore}/100</span>
-                        </div>
-                      )}
-
                       <div className="space-y-2">
-                        <h3 className="text-xl font-bold">Recommendations</h3>
-                        <ul className="list-inside list-disc space-y-1">
-                          {productRating.recommendations.map((rec, index) => (
-                            <li key={index}>{rec}</li>
-                          ))}
-                        </ul>
+                        <h3 className="text-xl font-bold">Summary</h3>
+                        <p>{productRating.summary}</p>
                       </div>
 
                       <Button onClick={resetScan} className="w-full">
                         Scan Another Product
                       </Button>
                     </div>
+                    )
                   ) : null}
                 </CardContent>
               </Card>
@@ -546,4 +559,10 @@ export default function CameraPage() {
       </div>
     </ProtectedRoute>
   )
+}
+
+function getRatingColor(rating: number) {
+  if (rating >= 8) return "border-green-500"
+  if (rating >= 5) return "border-yellow-500"
+  return "border-red-500"
 }

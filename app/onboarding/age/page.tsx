@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-import { OnboardingLayout } from "@/components/onboarding-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
@@ -57,14 +56,14 @@ export default function OnboardingAgePage() {
   }
 
   return (
-    <OnboardingLayout>
-      <div className="space-y-8">
+    <div className="flex flex-col items-center justify-center h-full">
+      <div className="w-full max-w-sm space-y-6">
         {/* Header */}
         <motion.div
-          className="text-center space-y-4"
+          className="text-center space-y-2"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
           <motion.div
             className="w-16 h-16 bg-gradient-to-r from-pickly-pink to-pickly-purple rounded-full mx-auto flex items-center justify-center mb-4"
@@ -81,28 +80,25 @@ export default function OnboardingAgePage() {
             <Calendar className="h-8 w-8 text-white" />
           </motion.div>
 
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue bg-clip-text text-transparent">
             How old are you?
           </h1>
-          <p className="text-gray-600 font-medium">We use this to provide more personalized product recommendations</p>
+          <p className="text-base sm:text-lg text-gray-600 font-medium">
+            We use this to provide more personalized product recommendations
+          </p>
         </motion.div>
 
         {/* Form Card */}
         <motion.div
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
           <Card className="backdrop-blur-lg bg-white/80 border-0 shadow-xl">
-            <CardContent className="p-8">
+            <CardContent className="p-6">
               <form onSubmit={handleSubmit} className="space-y-6">
-                <motion.div
-                  className="space-y-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <Label htmlFor="age" className="text-lg font-semibold text-gray-700">
+                <div className="space-y-2">
+                  <Label htmlFor="age" className="text-lg font-semibold text-gray-700 sr-only">
                     Your Age
                   </Label>
                   <motion.div whileFocus={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
@@ -114,16 +110,16 @@ export default function OnboardingAgePage() {
                       value={age || ""}
                       onChange={(e) => setAge(e.target.valueAsNumber)}
                       placeholder="Enter your age"
-                      className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-purple rounded-xl transition-all duration-300"
+                      className="text-center text-3xl font-bold h-20 border-2 border-gray-200 focus:border-pickly-purple rounded-xl transition-all duration-300"
                       disabled={isLoading}
                     />
                   </motion.div>
-                </motion.div>
+                </div>
 
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                   <Button
                     type="submit"
-                    className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue hover:from-pickly-purple hover:via-pickly-blue hover:to-pickly-teal transition-all duration-300 rounded-xl group"
+                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue hover:from-pickly-purple hover:via-pickly-blue hover:to-pickly-teal transition-all duration-300 rounded-xl group"
                     disabled={isLoading || !age}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -157,10 +153,10 @@ export default function OnboardingAgePage() {
 
         {/* Age Range Hints */}
         <motion.div
-          className="grid grid-cols-3 gap-4 text-center"
+          className="grid grid-cols-3 gap-2 sm:gap-4 text-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
+          transition={{ delay: 0.3 }}
         >
           {[
             { range: "13-17", label: "Teen", color: "from-pink-400 to-purple-400" },
@@ -169,20 +165,17 @@ export default function OnboardingAgePage() {
           ].map((item, index) => (
             <motion.div
               key={item.range}
-              className="p-4 bg-white/60 backdrop-blur-sm rounded-xl"
+              className="p-3 bg-white/60 backdrop-blur-sm rounded-xl"
               whileHover={{ scale: 1.05, y: -2 }}
               transition={{ type: "spring", stiffness: 300 }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{ animationDelay: `${0.9 + index * 0.1}s` }}
             >
-              <div className={`w-8 h-8 bg-gradient-to-r ${item.color} rounded-full mx-auto mb-2`} />
-              <p className="text-sm font-semibold text-gray-700">{item.range}</p>
+              <div className={`w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r ${item.color} rounded-full mx-auto mb-2`} />
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">{item.range}</p>
               <p className="text-xs text-gray-500">{item.label}</p>
             </motion.div>
           ))}
         </motion.div>
       </div>
-    </OnboardingLayout>
+    </div>
   )
 }

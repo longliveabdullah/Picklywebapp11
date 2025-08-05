@@ -50,7 +50,7 @@ export default function HomePage() {
             <div className="text-center space-y-8">
               <div className="space-y-4">
                 <Typewriter
-                  texts={["hi welcome back", "ready to make new picks?"]}
+                  texts={["Hi there", "ready to make new picks?"]}
                   speed={80}
                   delay={2500}
                   className="text-4xl md:text-5xl lg:text-6xl font-light text-white drop-shadow-lg"

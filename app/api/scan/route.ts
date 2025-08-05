@@ -21,12 +21,12 @@ interface ScanRequest {
 }
 
 interface ScanResponse {
+  brandName: string
+  category: string
   rating: number
-  explanation: string
-  recommendations: string[]
-  productName: string
-  healthScore: number
-  suitabilityScore: number
+  pros: string[]
+  cons: string[]
+  summary?: string
   ingredients?: string[]
 }
 
@@ -115,30 +115,38 @@ export async function POST(request: NextRequest) {
     // Build personalized prompt
     const personalizedContext = buildPersonalizedContext(profile)
 
-    const prompt = `You are Pickly, an AI product analyst. Analyze this product image and provide a personalized rating.
+    const prompt = `You are picklyai, a product analyzer that helps users understand the health and quality of products before buying them. Always provide the following:
+
+Brand name
+Category
+A rating out of 10 (explained below)
+A detailed list of Pros and Cons (2–4 detailed bullet points each)
+The rating reflects product quality, effect on human health, and fit for the user's profile.
+
+Rating logic:
+Start at 10/10.
+Subtract points for any negative health impact, low quality, poor ingredients, or mismatch with user needs.
+If the product is unidentified or lacks enough data, rate it 0/10 and explain that it couldn’t be analyzed.
+Clearly explain the reason for the final score.
+
+Pros and cons and summary :
+Write clearly and informatively.
+Do not just list ingredients — explain how they help or harm the user.
+Use simple language that a non-expert can understand.
+If the product contains ingredients commonly used in low-quality or cheap formulations (e.g., parabens, sulfates, artificial dyes, excessive preservatives, etc.), mention this in the cons and explain that these are often used in poor-quality products.
 
 ${personalizedContext}
 
-INSTRUCTIONS:
-1. Identify the product (name, type, brand if visible)
-2. Analyze ingredients/components if visible
-3. Rate 1-10 based on user suitability and general safety
-4. Consider the user's profile information provided above
-5. Provide detailed explanation of your rating
-6. Give 3-5 specific recommendations
+IMPORTANT SAFETY RULES:
+- If the user has allergies and the product contains these allergens, rate it 0/10 and clearly state it is DANGEROUS for the user.
+- If the user has diabetes and the product has high sugar content, rate it 0/10 and explain that it is DANGEROUS for diabetic users.
+- If the product contains ingredients the user wants to avoid, lower the rating significantly and highlight this in the cons.
+- For skincare products, consider the user’s skin type. If the product is unsuitable, reduce the score and explain why.
+- For hair products, consider the user’s scalp type. If it's not appropriate, reduce the score and explain why.
 
-CRITICAL: Respond with ONLY valid JSON in this exact format:
-{
-  "rating": [1-10 integer],
-  "productName": "Product name if identifiable",
-  "explanation": "Detailed explanation considering profile information",
-  "ingredients": ["ingredient1", "ingredient2"],
-  "recommendations": ["recommendation1", "recommendation2", "recommendation3"],
-  "healthScore": [1-100 integer],
-  "suitabilityScore": [1-100 integer]
-}
+Always prioritize the user’s health and safety above all.
 
-RESPOND WITH ONLY JSON - NO OTHER TEXT.`
+Always respond in JSON format with the following structure: { "brandName": string, "category": string, "rating": number, "pros": string[], "cons": string[], "summary": string }`
 
     let analysisResult: ScanResponse
 
@@ -148,7 +156,7 @@ RESPOND WITH ONLY JSON - NO OTHER TEXT.`
         console.log("🤖 Calling OpenRouter API...")
 
         const completion = await openai.chat.completions.create({
-          model: "openai/gpt-4o-mini",
+          model: "gpt-4.1-mini",
           messages: [
             {
               role: "user",
@@ -190,15 +198,13 @@ RESPOND WITH ONLY JSON - NO OTHER TEXT.`
           const parsed = JSON.parse(cleanContent)
 
           analysisResult = {
-            rating: Math.max(1, Math.min(10, Math.round(parsed.rating || 5))),
-            explanation: parsed.explanation || "Analysis completed successfully.",
-            recommendations: Array.isArray(parsed.recommendations)
-              ? parsed.recommendations.slice(0, 5)
-              : ["Use as directed"],
-            productName: parsed.productName || "Analyzed Product",
-            healthScore: Math.max(1, Math.min(100, Math.round(parsed.healthScore || 50))),
-            suitabilityScore: Math.max(1, Math.min(100, Math.round(parsed.suitabilityScore || 50))),
-            ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients : [],
+            brandName: parsed.brandName,
+            category: parsed.category,
+            rating: parsed.rating,
+            pros: parsed.pros,
+            cons: parsed.cons,
+            summary: parsed.summary,
+            ingredients: parsed.ingredients,
           }
 
           console.log("✅ Successfully parsed OpenRouter response")
@@ -221,10 +227,10 @@ RESPOND WITH ONLY JSON - NO OTHER TEXT.`
     try {
       const { error: insertError } = await supabase.from("scan_history").insert({
         user_id: userId,
-        product_name: analysisResult.productName,
+        product_name: analysisResult.brandName,
         rating: analysisResult.rating,
-        explanation: analysisResult.explanation,
-        recommendations: analysisResult.recommendations,
+        explanation: analysisResult.summary,
+        recommendations: [],
         user_profile_snapshot: profile || {},
         image_url: `data:image/jpeg;base64,${imageBase64.substring(0, 100)}...`, // Store truncated for reference
       })
@@ -241,8 +247,7 @@ RESPOND WITH ONLY JSON - NO OTHER TEXT.`
 
     console.log("🎉 Analysis completed successfully:", {
       rating: analysisResult.rating,
-      productName: analysisResult.productName,
-      hasRecommendations: analysisResult.recommendations.length > 0,
+      brandName: analysisResult.brandName,
     })
 
     return NextResponse.json(analysisResult)
@@ -334,51 +339,49 @@ ${parts.length > 0 ? parts.join("\n") : "No specific profile information availab
 }
 
 function generateMockResponse(profile: any): ScanResponse {
-  const rating = Math.floor(Math.random() * 10) + 1
+  const rating = Math.floor(Math.random() * 11)
+  const isDangerous = rating === 0
+  const isUnrecognized = Math.random() < 0.1
 
-  let explanation = "Based on our analysis, this product "
-  if (rating >= 8) {
-    explanation += "appears to be an excellent choice with high quality ingredients and good safety profile."
-  } else if (rating >= 5) {
-    explanation += "seems to be a decent option with some considerations to keep in mind."
-  } else {
-    explanation += "may not be the best choice due to potential concerns with ingredients or suitability."
-  }
-
-  if (profile?.skin_type) {
-    explanation += ` For your ${profile.skin_type} skin type, `
-    if (profile.skin_type === "sensitive") {
-      explanation += "we recommend patch testing before full use."
-    } else {
-      explanation += "this product should work well with proper application."
+  if (isUnrecognized) {
+    return {
+      rating: -1,
+      summary: "From where did u find this thing ?",
+      brandName: "Unrecognized",
+      category: "Unknown",
+      pros: [],
+      cons: [],
     }
   }
 
-  if (profile?.allergies && profile.allergies.length > 0) {
-    explanation += ` We've considered your known allergies (${profile.allergies.join(", ")}) in this assessment.`
+  let summary = "Based on your profile, this product is "
+  if (isDangerous) {
+    summary = "This product is dangerous for you due to your health profile."
+  } else if (rating >= 8) {
+    summary += "an excellent match for you."
+  } else if (rating >= 5) {
+    summary += "a good match for you, with some considerations."
+  } else {
+    summary += "not recommended for your specific needs."
   }
 
-  const recommendations = [
-    "Read all ingredient labels carefully",
-    "Use as directed on packaging",
-    "Store in a cool, dry place",
-  ]
+  const pros = ["Affordable price", "Widely available", "Pleasant scent"]
+  const cons = ["Contains artificial colors", "Not suitable for very dry skin"]
 
-  if (profile?.skin_type === "sensitive") {
-    recommendations.push("Perform a patch test before first use")
+  if (rating > 7) {
+    pros.push("Highly effective formula")
   }
-
-  if (rating < 5) {
-    recommendations.push("Consider alternative products better suited to your needs")
+  if (rating < 4) {
+    cons.push("May cause irritation for sensitive skin")
   }
 
   return {
     rating,
-    explanation,
-    recommendations,
-    productName: "Analyzed Product",
-    healthScore: Math.floor(Math.random() * 100) + 1,
-    suitabilityScore: rating * 10,
-    ingredients: ["Natural extracts", "Preservatives", "Active compounds"],
+    summary,
+    brandName: "Nivea",
+    category: "Skincare – Moisturizer",
+    pros,
+    cons,
+    ingredients: ["Aqua", "Glycerin", "Parfum"],
   }
 }

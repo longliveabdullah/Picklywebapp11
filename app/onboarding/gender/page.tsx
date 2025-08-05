@@ -7,7 +7,6 @@ import { motion } from "framer-motion"
 import { Users, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { OnboardingLayout } from "@/components/onboarding-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import type { UserProfile } from "@/types"
@@ -62,14 +61,14 @@ export default function OnboardingGenderPage() {
   }
 
   return (
-    <OnboardingLayout>
-      <div className="space-y-8">
+    <div className="flex flex-col items-center justify-center h-full">
+      <div className="w-full max-w-sm space-y-6">
         {/* Header */}
         <motion.div
-          className="text-center space-y-4"
+          className="text-center space-y-2"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
           <motion.div
             className="w-16 h-16 bg-gradient-to-r from-pickly-purple to-pickly-blue rounded-full mx-auto flex items-center justify-center mb-4"
@@ -86,20 +85,22 @@ export default function OnboardingGenderPage() {
             <Users className="h-8 w-8 text-white" />
           </motion.div>
 
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal bg-clip-text text-transparent">
             What is your gender?
           </h1>
-          <p className="text-gray-600 font-medium">This helps us provide more relevant product recommendations</p>
+          <p className="text-base sm:text-lg text-gray-600 font-medium">
+            This helps us provide more relevant product recommendations
+          </p>
         </motion.div>
 
         {/* Form Card */}
         <motion.div
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
           <Card className="backdrop-blur-lg bg-white/80 border-0 shadow-xl">
-            <CardContent className="p-8">
+            <CardContent className="p-6">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid gap-3">
                   {genderOptions.map((option, index) => (
@@ -107,7 +108,7 @@ export default function OnboardingGenderPage() {
                       key={option.value}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + index * 0.1 }}
+                      transition={{ delay: 0.2 + index * 0.05 }}
                     >
                       <Button
                         type="button"
@@ -141,10 +142,10 @@ export default function OnboardingGenderPage() {
                   ))}
                 </div>
 
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                   <Button
                     type="submit"
-                    className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal hover:from-pickly-blue hover:via-pickly-teal hover:to-pickly-green transition-all duration-300 rounded-xl"
+                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal hover:from-pickly-blue hover:via-pickly-teal hover:to-pickly-green transition-all duration-300 rounded-xl"
                     disabled={isLoading || !gender}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -176,6 +177,6 @@ export default function OnboardingGenderPage() {
           </Card>
         </motion.div>
       </div>
-    </OnboardingLayout>
+    </div>
   )
 }
