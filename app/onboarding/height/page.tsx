@@ -40,16 +40,13 @@ export default function OnboardingHeightPage() {
         },
       })
 
-      setTimeout(() => {
-        router.push("/onboarding/weight")
-      }, 300)
+      router.push("/onboarding/weight")
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to save your height. Please try again.",
         variant: "destructive",
       })
-    } finally {
       setIsLoading(false)
     }
   }
