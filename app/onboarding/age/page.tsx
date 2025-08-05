@@ -59,26 +59,10 @@ export default function OnboardingAgePage() {
     <div className="flex flex-col items-center justify-center h-full">
       <div className="w-full max-w-sm space-y-6">
         {/* Header */}
-        <motion.div
-          className="text-center space-y-2"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <motion.div
-            className="w-16 h-16 bg-gradient-to-r from-pickly-pink to-pickly-purple rounded-full mx-auto flex items-center justify-center mb-4"
-            animate={{
-              rotate: [0, 5, -5, 0],
-              scale: [1, 1.05, 1],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }}
-          >
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 bg-gradient-to-r from-pickly-pink to-pickly-purple rounded-full mx-auto flex items-center justify-center mb-4">
             <Calendar className="h-8 w-8 text-white" />
-          </motion.div>
+          </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue bg-clip-text text-transparent">
             How old are you?
@@ -86,14 +70,10 @@ export default function OnboardingAgePage() {
           <p className="text-base sm:text-lg text-gray-600 font-medium">
             We use this to provide more personalized product recommendations
           </p>
-        </motion.div>
+        </div>
 
         {/* Form Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
+        <div>
           <Card className="backdrop-blur-lg bg-white/80 border-0 shadow-xl">
             <CardContent className="p-6">
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -101,7 +81,7 @@ export default function OnboardingAgePage() {
                   <Label htmlFor="age" className="text-lg font-semibold text-gray-700 sr-only">
                     Your Age
                   </Label>
-                  <motion.div whileFocus={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <div>
                     <Input
                       id="age"
                       type="number"
@@ -113,68 +93,50 @@ export default function OnboardingAgePage() {
                       className="text-center text-3xl font-bold h-20 border-2 border-gray-200 focus:border-pickly-purple rounded-xl transition-all duration-300"
                       disabled={isLoading}
                     />
-                  </motion.div>
+                  </div>
                 </div>
 
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                <div>
                   <Button
                     type="submit"
                     className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue hover:from-pickly-purple hover:via-pickly-blue hover:to-pickly-teal transition-all duration-300 rounded-xl group"
                     disabled={isLoading || !age}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
                   >
                     {isLoading ? (
-                      <motion.div className="flex items-center gap-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        <motion.div
-                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                        />
+                      <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                         Saving...
-                      </motion.div>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-3">
                         Continue
-                        <motion.div
-                          animate={{ x: [0, 5, 0] }}
-                          transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
-                        >
-                          <ArrowRight className="h-5 w-5" />
-                        </motion.div>
+                        <div className="h-5 w-5" />
                       </div>
                     )}
                   </Button>
-                </motion.div>
+                </div>
               </form>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         {/* Age Range Hints */}
-        <motion.div
-          className="grid grid-cols-3 gap-2 sm:gap-4 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
           {[
             { range: "13-17", label: "Teen", color: "from-pink-400 to-purple-400" },
             { range: "18-64", label: "Adult", color: "from-purple-400 to-blue-400" },
             { range: "65+", label: "Senior", color: "from-blue-400 to-teal-400" },
           ].map((item, index) => (
-            <motion.div
+            <div
               key={item.range}
               className="p-3 bg-white/60 backdrop-blur-sm rounded-xl"
-              whileHover={{ scale: 1.05, y: -2 }}
-              transition={{ type: "spring", stiffness: 300 }}
             >
               <div className={`w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r ${item.color} rounded-full mx-auto mb-2`} />
               <p className="text-xs sm:text-sm font-semibold text-gray-700">{item.range}</p>
               <p className="text-xs text-gray-500">{item.label}</p>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </div>
   )

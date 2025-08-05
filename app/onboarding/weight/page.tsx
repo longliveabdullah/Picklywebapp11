@@ -58,52 +58,27 @@ export default function OnboardingWeightPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <motion.div
-        className="text-center space-y-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <motion.div
-          className="w-16 h-16 bg-gradient-to-r from-pickly-teal to-pickly-green rounded-full mx-auto flex items-center justify-center mb-4"
-          animate={{
-            rotate: [0, 5, -5, 0],
-            scale: [1, 1.05, 1],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        >
+      <div className="text-center space-y-4">
+        <div className="w-16 h-16 bg-gradient-to-r from-pickly-teal to-pickly-green rounded-full mx-auto flex items-center justify-center mb-4">
           <Scale className="h-8 w-8 text-white" />
-        </motion.div>
+        </div>
 
         <h1 className="text-3xl font-bold bg-gradient-to-r from-pickly-teal via-pickly-green to-pickly-pink bg-clip-text text-transparent">
           What is your weight?
         </h1>
         <p className="text-gray-600 font-medium">Final step - enter your weight in kilograms</p>
-      </motion.div>
+      </div>
 
       {/* Form Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-      >
+      <div>
         <Card className="backdrop-blur-lg bg-white/80 border-0 shadow-xl">
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <motion.div
-                className="space-y-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-              >
+              <div className="space-y-3">
                 <Label htmlFor="weight" className="text-lg font-semibold text-gray-700">
                   Weight (kg)
                 </Label>
-                <motion.div whileFocus={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                <div>
                   <Input
                     id="weight"
                     type="number"
@@ -115,44 +90,33 @@ export default function OnboardingWeightPage() {
                     className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-teal rounded-xl transition-all duration-300"
                     disabled={isLoading}
                   />
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+              <div>
                 <Button
                   type="submit"
                   className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-teal via-pickly-green to-pickly-pink hover:from-pickly-green hover:via-pickly-pink hover:to-pickly-purple transition-all duration-300 rounded-xl group"
                   disabled={isLoading || !weight}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
                 >
                   {isLoading ? (
-                    <motion.div className="flex items-center gap-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                      <motion.div
-                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                      />
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                       Completing Setup...
-                    </motion.div>
+                    </div>
                   ) : (
                     <div className="flex items-center gap-3">
                       <CheckCircle className="h-5 w-5" />
                       Complete Setup
-                      <motion.div
-                        animate={{ rotate: [0, 15, -15, 0] }}
-                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                      >
-                        <Sparkles className="h-5 w-5" />
-                      </motion.div>
+                      <div className="h-5 w-5" />
                     </div>
                   )}
                 </Button>
-              </motion.div>
+              </div>
             </form>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
     </div>
   )
