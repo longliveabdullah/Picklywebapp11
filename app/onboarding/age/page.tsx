@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { Calendar, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -98,7 +97,7 @@ export default function OnboardingAgePage() {
                       value={age || ""}
                       onChange={(e) => setAge(e.target.valueAsNumber)}
                       placeholder="Enter your age"
-                      className="text-center text-3xl font-bold h-20 border-2 border-gray-200 focus:border-pickly-purple rounded-xl transition-all duration-300"
+                      className="text-center text-3xl font-bold h-20 border-2 border-gray-200 focus:border-pickly-purple rounded-xl"
                     />
                   </div>
                 </div>
@@ -106,7 +105,7 @@ export default function OnboardingAgePage() {
                 <div>
                   <Button
                     type="submit"
-                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue hover:from-pickly-purple hover:via-pickly-blue hover:to-pickly-teal transition-all duration-300 rounded-xl group"
+                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue hover:from-pickly-purple hover:via-pickly-blue hover:to-pickly-teal rounded-xl group"
                     disabled={!age}
                   >
                     <div className="flex items-center gap-3">

@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { Users, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -84,9 +83,9 @@ export default function OnboardingGenderPage() {
                       <Button
                         type="button"
                         variant={gender === option.value ? "default" : "outline"}
-                        className={`w-full h-16 text-left justify-start text-lg font-semibold transition-all duration-300 rounded-xl ${
+                        className={`w-full h-16 text-left justify-start text-lg font-semibold rounded-xl ${
                           gender === option.value
-                            ? "bg-gradient-to-r from-pickly-purple to-pickly-blue text-white shadow-lg scale-105"
+                            ? "bg-gradient-to-r from-pickly-purple to-pickly-blue text-white shadow-lg"
                             : "bg-white/60 hover:bg-white/80 border-2 border-gray-200 hover:border-pickly-purple"
                         }`}
                         onClick={() => setGender(option.value)}
@@ -108,7 +107,7 @@ export default function OnboardingGenderPage() {
                 <div>
                   <Button
                     type="submit"
-                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal hover:from-pickly-blue hover:via-pickly-teal hover:to-pickly-green transition-all duration-300 rounded-xl"
+                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal hover:from-pickly-blue hover:via-pickly-teal hover:to-pickly-green rounded-xl"
                     disabled={!gender}
                   >
                     <div className="flex items-center gap-3">

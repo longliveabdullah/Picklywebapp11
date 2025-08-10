@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { Scale, CheckCircle, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -85,7 +84,7 @@ export default function OnboardingWeightPage() {
                     value={weight || ""}
                     onChange={(e) => setWeight(e.target.valueAsNumber)}
                     placeholder="Enter your weight in kg"
-                    className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-teal rounded-xl transition-all duration-300"
+                    className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-teal rounded-xl"
                   />
                 </div>
               </div>
@@ -93,7 +92,7 @@ export default function OnboardingWeightPage() {
               <div>
                 <Button
                   type="submit"
-                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-teal via-pickly-green to-pickly-pink hover:from-pickly-green hover:via-pickly-pink hover:to-pickly-purple transition-all duration-300 rounded-xl group"
+                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-teal via-pickly-green to-pickly-pink hover:from-pickly-green hover:via-pickly-pink hover:to-pickly-purple rounded-xl group"
                   disabled={!weight}
                 >
                   <div className="flex items-center gap-3">

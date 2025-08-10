@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { Ruler, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -88,7 +87,7 @@ export default function OnboardingHeightPage() {
                     value={height || ""}
                     onChange={(e) => setHeight(e.target.valueAsNumber)}
                     placeholder="Enter your height in cm"
-                    className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-blue rounded-xl transition-all duration-300"
+                    className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-blue rounded-xl"
                   />
                 </div>
 
@@ -111,7 +110,7 @@ export default function OnboardingHeightPage() {
               <div>
                 <Button
                   type="submit"
-                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-blue via-pickly-teal to-pickly-green hover:from-pickly-teal hover:via-pickly-green hover:to-pickly-blue transition-all duration-300 rounded-xl"
+                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-blue via-pickly-teal to-pickly-green hover:from-pickly-teal hover:via-pickly-green hover:to-pickly-blue rounded-xl"
                   disabled={!height}
                 >
                   <div className="flex items-center gap-3">
