@@ -19,13 +19,12 @@ const genderOptions: { value: UserProfile["gender"]; label: string; icon: string
 ]
 
 export default function OnboardingGenderPage() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUser, setLocalUserProfile } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [gender, setGender] = useState<UserProfile["gender"]>(user?.profile.gender)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!gender) {
@@ -37,24 +36,24 @@ export default function OnboardingGenderPage() {
       return
     }
 
-    try {
-      setIsLoading(true)
-      await updateUser({
-        profile: {
-          ...user?.profile,
-          gender,
-        },
-      })
+    // Optimistic update, instant navigation, and background save
+    setLocalUserProfile({ gender })
+    router.push("/onboarding/height")
 
-      router.push("/onboarding/height")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save your selection. Please try again.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
+    const saveOperation = async () => {
+      console.time("updateUser-gender-save")
+      try {
+        await updateUser({
+          profile: {
+            gender,
+          },
+        })
+      } finally {
+        console.timeEnd("updateUser-gender-save")
+      }
     }
+
+    void saveOperation()
   }
 
   return (
@@ -91,7 +90,6 @@ export default function OnboardingGenderPage() {
                             : "bg-white/60 hover:bg-white/80 border-2 border-gray-200 hover:border-pickly-purple"
                         }`}
                         onClick={() => setGender(option.value)}
-                        disabled={isLoading}
                       >
                         <span className="text-2xl mr-4">{option.icon}</span>
                         {option.label}
@@ -111,19 +109,12 @@ export default function OnboardingGenderPage() {
                   <Button
                     type="submit"
                     className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal hover:from-pickly-blue hover:via-pickly-teal hover:to-pickly-green transition-all duration-300 rounded-xl"
-                    disabled={isLoading || !gender}
+                    disabled={!gender}
                   >
-                    {isLoading ? (
-                      <div className="flex items-center gap-3">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                        Saving...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        Continue
-                        <div className="h-5 w-5" />
-                      </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      Continue
+                      <div className="h-5 w-5" />
+                    </div>
                   </Button>
                 </div>
               </form>

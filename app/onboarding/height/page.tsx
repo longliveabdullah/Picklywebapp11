@@ -13,13 +13,12 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingHeightPage() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUser, setLocalUserProfile } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [height, setHeight] = useState<number | undefined>(user?.profile.height)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!height || height < 50 || height > 250) {
@@ -31,24 +30,24 @@ export default function OnboardingHeightPage() {
       return
     }
 
-    try {
-      setIsLoading(true)
-      await updateUser({
-        profile: {
-          ...user?.profile,
-          height,
-        },
-      })
+    // Optimistic update, instant navigation, and background save
+    setLocalUserProfile({ height })
+    router.push("/onboarding/weight")
 
-      router.push("/onboarding/weight")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save your height. Please try again.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
+    const saveOperation = async () => {
+      console.time("updateUser-height-save")
+      try {
+        await updateUser({
+          profile: {
+            height,
+          },
+        })
+      } finally {
+        console.timeEnd("updateUser-height-save")
+      }
     }
+
+    void saveOperation()
   }
 
   const getHeightCategory = (height: number) => {
@@ -90,7 +89,6 @@ export default function OnboardingHeightPage() {
                     onChange={(e) => setHeight(e.target.valueAsNumber)}
                     placeholder="Enter your height in cm"
                     className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-blue rounded-xl transition-all duration-300"
-                    disabled={isLoading}
                   />
                 </div>
 
@@ -114,19 +112,12 @@ export default function OnboardingHeightPage() {
                 <Button
                   type="submit"
                   className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-blue via-pickly-teal to-pickly-green hover:from-pickly-teal hover:via-pickly-green hover:to-pickly-blue transition-all duration-300 rounded-xl"
-                  disabled={isLoading || !height}
+                  disabled={!height}
                 >
-                  {isLoading ? (
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                      Saving...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      Continue
-                      <div className="h-5 w-5" />
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    Continue
+                    <div className="h-5 w-5" />
+                  </div>
                 </Button>
               </div>
             </form>

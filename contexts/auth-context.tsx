@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
 import type { User, ScanHistoryItem, UserProfile } from "@/types"
 import type { AuthError } from "@supabase/supabase-js"
+import { toast } from "@/hooks/use-toast"
+import { getQueue, addToQueue, removeFromQueue, updateQueueItem } from "@/lib/retry-queue"
 
 type AuthContextType = {
   user: User | null
@@ -17,6 +19,7 @@ type AuthContextType = {
   signOut: () => Promise<void>
   updateUser: (updates: Partial<User>) => Promise<void>
   updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>
+  setLocalUserProfile: (profile: Partial<UserProfile>) => void
   addScanToHistory: (scan: Omit<ScanHistoryItem, "id" | "scannedAt">) => Promise<void>
   getScanHistory: () => Promise<ScanHistoryItem[]>
   deleteScanFromHistory: (scanId: string) => Promise<void>
@@ -71,6 +74,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // --- Queue Processing ---
+  const processUpdateQueue = async () => {
+    if (!user?.id) return
+
+    const pendingUpdates = getQueue()
+    if (pendingUpdates.length === 0) return
+
+    console.log(`Processing ${pendingUpdates.length} pending update(s)...`)
+    toast({
+      title: "Syncing...",
+      description: `Saving ${pendingUpdates.length} pending update(s).`,
+    })
+
+    let successCount = 0
+    for (const update of pendingUpdates) {
+      try {
+        // Exponential backoff: wait before retrying, but not on the first attempt.
+        if (update.attempts > 0) {
+          // Formula: (2^attempts * 1000ms), capped at 60 seconds.
+          const delay = Math.min(60000, 2 ** update.attempts * 1000)
+          console.log(`Waiting ${delay}ms to retry update ${update.id}...`)
+          await new Promise((resolve) => setTimeout(resolve, delay))
+        }
+
+        // Attempt to save the data
+        await DatabaseService.updateUserProfile(user.id, update.payload)
+
+        // If successful, remove it from the queue
+        removeFromQueue(update.id)
+        successCount++
+      } catch (error) {
+        // If it fails again, increment the attempt counter and update the item.
+        console.error(`Failed to process update ${update.id} (attempt ${update.attempts + 1}):`, error)
+        updateQueueItem(update.id, { attempts: update.attempts + 1 })
+      }
+    }
+
+    const finalQueue = getQueue()
+    if (finalQueue.length === 0) {
+      toast({
+        title: "Sync Complete",
+        description: "All your data has been saved.",
+      })
+      // Reload data after sync to ensure UI is consistent
+      await loadUserData(user.id, user.email!)
+    } else {
+      toast({
+        title: "Sync Incomplete",
+        description: `Successfully saved ${successCount} update(s), but ${finalQueue.length} failed to save. We will try again later.`,
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Effect to process the queue when the user is loaded
+  useEffect(() => {
+    if (user?.id) {
+      processUpdateQueue()
+    }
+  }, [user?.id])
+  // --- End of Queue Processing ---
 
   const loadUserData = async (userId: string, email: string) => {
     try {
@@ -225,6 +290,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const setLocalUserProfile = (profile: Partial<UserProfile>) => {
+    if (!user) return
+    setUser({
+      ...user,
+      profile: {
+        ...user.profile,
+        ...profile,
+      },
+    })
+  }
+
   const updateUser = async (updates: Partial<User>) => {
     if (!user) return
 
@@ -245,11 +321,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await Promise.all(updatePromises)
 
-      // Reload user data once after all updates are done
-      await loadUserData(user.id, user.email)
+      // No longer reloading user data here. The optimistic update is already
+      // in the local state. The queue processor will reload data if needed
+      // after a successful sync.
     } catch (error) {
+      // Errors are handled in the individual update functions (e.g., updateUserProfile)
+      // so we just log here and don't re-throw.
       console.error("Update user error:", error)
-      throw error
     }
   }
 
@@ -259,8 +337,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await DatabaseService.updateUserProfile(user.id, profile)
     } catch (error) {
-      console.error("Update user profile error:", error)
-      throw error
+      console.error("Update user profile error (will be queued):", error)
+      // Add to queue for retrying later
+      addToQueue(profile)
+      // Notify user
+      toast({
+        title: "Couldn't Save Update",
+        description: "Your change will be saved when you're back online.",
+        variant: "destructive",
+      })
+      // Do not re-throw the error, as we've handled it by queueing.
     }
   }
 
@@ -341,6 +427,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         updateUser,
         updateUserProfile,
+        setLocalUserProfile,
         addScanToHistory,
         getScanHistory,
         deleteScanFromHistory,
