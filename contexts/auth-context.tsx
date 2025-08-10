@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
 import type { User, ScanHistoryItem, UserProfile } from "@/types"
 import type { AuthError } from "@supabase/supabase-js"
+import { toast } from "@/hooks/use-toast"
 
 type AuthContextType = {
   user: User | null
@@ -228,6 +229,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = async (updates: Partial<User>) => {
     if (!user) return
 
+    const originalUser = user
+
+    // Perform a deep merge for the optimistic update
+    const newUser = {
+      ...originalUser,
+      ...updates,
+      profile: updates.profile
+        ? { ...originalUser.profile, ...updates.profile }
+        : originalUser.profile,
+    }
+    setUser(newUser)
+
     try {
       const updatePromises: Promise<unknown>[] = []
 
@@ -244,24 +257,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       await Promise.all(updatePromises)
-
-      // Reload user data once after all updates are done
-      await loadUserData(user.id, user.email)
     } catch (error) {
-      console.error("Update user error:", error)
-      throw error
+      // If the update fails, revert the user state and show a toast
+      console.error("Update user failed, reverting optimistic update:", error)
+      setUser(originalUser)
+      toast({
+        title: "Update Failed",
+        description: "Your changes could not be saved. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
   const updateUserProfile = async (profile: Partial<UserProfile>) => {
     if (!user) return
-
-    try {
-      await DatabaseService.updateUserProfile(user.id, profile)
-    } catch (error) {
-      console.error("Update user profile error:", error)
-      throw error
-    }
+    // Errors will be caught by the calling function, `updateUser`.
+    await DatabaseService.updateUserProfile(user.id, profile)
   }
 
   const addScanToHistory = async (scan: Omit<ScanHistoryItem, "id" | "scannedAt">) => {

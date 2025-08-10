@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { Scale, CheckCircle, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +16,8 @@ export default function OnboardingWeightPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [weight, setWeight] = useState<number | undefined>(user?.profile.weight)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!weight || weight < 20 || weight > 300) {
@@ -31,25 +29,16 @@ export default function OnboardingWeightPage() {
       return
     }
 
-    try {
-      setIsLoading(true)
-      await updateUser({
-        onboardingComplete: true,
-        profile: {
-          ...user?.profile,
-          weight,
-        },
-      })
+    router.push("/onboarding/complete")
 
-      router.push("/onboarding/complete")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save your weight. Please try again.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-    }
+    // Fire-and-forget. `updateUser` handles the optimistic update
+    // of both weight and the onboardingComplete flag.
+    void updateUser({
+      onboardingComplete: true,
+      profile: {
+        weight,
+      },
+    })
   }
 
   return (
@@ -84,8 +73,7 @@ export default function OnboardingWeightPage() {
                     value={weight || ""}
                     onChange={(e) => setWeight(e.target.valueAsNumber)}
                     placeholder="Enter your weight in kg"
-                    className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-teal rounded-xl transition-all duration-300"
-                    disabled={isLoading}
+                    className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-teal rounded-xl"
                   />
                 </div>
               </div>
@@ -93,28 +81,20 @@ export default function OnboardingWeightPage() {
               <div>
                 <Button
                   type="submit"
-                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-teal via-pickly-green to-pickly-pink hover:from-pickly-green hover:via-pickly-pink hover:to-pickly-purple transition-all duration-300 rounded-xl group"
-                  disabled={isLoading || !weight}
+                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-teal via-pickly-green to-pickly-pink hover:from-pickly-green hover:via-pickly-pink hover:to-pickly-purple rounded-xl group"
+                  disabled={!weight}
                 >
-                  {isLoading ? (
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                      Completing Setup...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5" />
-                      Complete Setup
-                      <div className="h-5 w-5" />
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5" />
+                    Complete Setup
+                    <div className="h-5 w-5" />
+                  </div>
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
       </div>
-
     </div>
   )
 }

@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { Users, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -23,9 +22,8 @@ export default function OnboardingGenderPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [gender, setGender] = useState<UserProfile["gender"]>(user?.profile.gender)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!gender) {
@@ -37,24 +35,13 @@ export default function OnboardingGenderPage() {
       return
     }
 
-    try {
-      setIsLoading(true)
-      await updateUser({
-        profile: {
-          ...user?.profile,
-          gender,
-        },
-      })
+    router.push("/onboarding/height")
 
-      router.push("/onboarding/height")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save your selection. Please try again.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-    }
+    void updateUser({
+      profile: {
+        gender,
+      },
+    })
   }
 
   return (
@@ -85,13 +72,12 @@ export default function OnboardingGenderPage() {
                       <Button
                         type="button"
                         variant={gender === option.value ? "default" : "outline"}
-                        className={`w-full h-16 text-left justify-start text-lg font-semibold transition-all duration-300 rounded-xl ${
+                        className={`w-full h-16 text-left justify-start text-lg font-semibold rounded-xl ${
                           gender === option.value
-                            ? "bg-gradient-to-r from-pickly-purple to-pickly-blue text-white shadow-lg scale-105"
+                            ? "bg-gradient-to-r from-pickly-purple to-pickly-blue text-white shadow-lg"
                             : "bg-white/60 hover:bg-white/80 border-2 border-gray-200 hover:border-pickly-purple"
                         }`}
                         onClick={() => setGender(option.value)}
-                        disabled={isLoading}
                       >
                         <span className="text-2xl mr-4">{option.icon}</span>
                         {option.label}
@@ -110,20 +96,13 @@ export default function OnboardingGenderPage() {
                 <div>
                   <Button
                     type="submit"
-                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal hover:from-pickly-blue hover:via-pickly-teal hover:to-pickly-green transition-all duration-300 rounded-xl"
-                    disabled={isLoading || !gender}
+                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-purple via-pickly-blue to-pickly-teal hover:from-pickly-blue hover:via-pickly-teal hover:to-pickly-green rounded-xl"
+                    disabled={!gender}
                   >
-                    {isLoading ? (
-                      <div className="flex items-center gap-3">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                        Saving...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        Continue
-                        <div className="h-5 w-5" />
-                      </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      Continue
+                      <div className="h-5 w-5" />
+                    </div>
                   </Button>
                 </div>
               </form>

@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { Ruler, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +16,8 @@ export default function OnboardingHeightPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [height, setHeight] = useState<number | undefined>(user?.profile.height)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!height || height < 50 || height > 250) {
@@ -31,24 +29,13 @@ export default function OnboardingHeightPage() {
       return
     }
 
-    try {
-      setIsLoading(true)
-      await updateUser({
-        profile: {
-          ...user?.profile,
-          height,
-        },
-      })
+    router.push("/onboarding/weight")
 
-      router.push("/onboarding/weight")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save your height. Please try again.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-    }
+    void updateUser({
+      profile: {
+        height,
+      },
+    })
   }
 
   const getHeightCategory = (height: number) => {
@@ -89,8 +76,7 @@ export default function OnboardingHeightPage() {
                     value={height || ""}
                     onChange={(e) => setHeight(e.target.valueAsNumber)}
                     placeholder="Enter your height in cm"
-                    className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-blue rounded-xl transition-all duration-300"
-                    disabled={isLoading}
+                    className="text-center text-2xl font-bold h-16 border-2 border-gray-200 focus:border-pickly-blue rounded-xl"
                   />
                 </div>
 
@@ -113,20 +99,13 @@ export default function OnboardingHeightPage() {
               <div>
                 <Button
                   type="submit"
-                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-blue via-pickly-teal to-pickly-green hover:from-pickly-teal hover:via-pickly-green hover:to-pickly-blue transition-all duration-300 rounded-xl"
-                  disabled={isLoading || !height}
+                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-pickly-blue via-pickly-teal to-pickly-green hover:from-pickly-teal hover:via-pickly-green hover:to-pickly-blue rounded-xl"
+                  disabled={!height}
                 >
-                  {isLoading ? (
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                      Saving...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      Continue
-                      <div className="h-5 w-5" />
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    Continue
+                    <div className="h-5 w-5" />
+                  </div>
                 </Button>
               </div>
             </form>

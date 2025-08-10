@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
 import { Calendar, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +16,8 @@ export default function OnboardingAgePage() {
   const router = useRouter()
   const { toast } = useToast()
   const [age, setAge] = useState<number | undefined>(user?.profile.age)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!age || age < 13 || age > 120) {
@@ -31,24 +29,17 @@ export default function OnboardingAgePage() {
       return
     }
 
-    try {
-      setIsLoading(true)
-      await updateUser({
-        profile: {
-          ...user?.profile,
-          age,
-        },
-      })
+    // Navigate immediately. The updateUser function now handles the optimistic update.
+    router.push("/onboarding/gender")
 
-      router.push("/onboarding/gender")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save your age. Please try again.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-    }
+    // Fire-and-forget the update.
+    // The updateUser function will optimistically update the state and
+    // revert it if the database call fails.
+    void updateUser({
+      profile: {
+        age,
+      },
+    })
   }
 
   return (
@@ -86,8 +77,7 @@ export default function OnboardingAgePage() {
                       value={age || ""}
                       onChange={(e) => setAge(e.target.valueAsNumber)}
                       placeholder="Enter your age"
-                      className="text-center text-3xl font-bold h-20 border-2 border-gray-200 focus:border-pickly-purple rounded-xl transition-all duration-300"
-                      disabled={isLoading}
+                      className="text-center text-3xl font-bold h-20 border-2 border-gray-200 focus:border-pickly-purple rounded-xl"
                     />
                   </div>
                 </div>
@@ -95,20 +85,13 @@ export default function OnboardingAgePage() {
                 <div>
                   <Button
                     type="submit"
-                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue hover:from-pickly-purple hover:via-pickly-blue hover:to-pickly-teal transition-all duration-300 rounded-xl group"
-                    disabled={isLoading || !age}
+                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue hover:from-pickly-purple hover:via-pickly-blue hover:to-pickly-teal rounded-xl group"
+                    disabled={!age}
                   >
-                    {isLoading ? (
-                      <div className="flex items-center gap-3">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                        Saving...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        Continue
-                        <div className="h-5 w-5" />
-                      </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      Continue
+                      <div className="h-5 w-5" />
+                    </div>
                   </Button>
                 </div>
               </form>
