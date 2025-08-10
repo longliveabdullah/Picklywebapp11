@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingAgePage() {
-  const { user, updateUser, setLocalUserProfile } = useAuth()
+  const { user, updateUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [age, setAge] = useState<number | undefined>(user?.profile.age)
@@ -20,8 +20,6 @@ export default function OnboardingAgePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // --- 1. Client-side validation ---
-    // This remains the same. If validation fails, we show a toast and stop.
     if (!age || age < 13 || age > 120) {
       toast({
         title: "Invalid age",
@@ -31,35 +29,17 @@ export default function OnboardingAgePage() {
       return
     }
 
-    // --- 2. Optimistic UI Update ---
-    // Update the local user state immediately. This is a synchronous, in-memory
-    // update that ensures the next page shows the new value without flickering.
-    setLocalUserProfile({ age })
-
-    // --- 3. Immediate Navigation ---
-    // Navigate to the next step without waiting for the backend save to complete.
+    // Navigate immediately. The updateUser function now handles the optimistic update.
     router.push("/onboarding/gender")
 
-    // --- 4. Background Save & Instrumentation ---
-    // This is the "fire-and-forget" part. We trigger the save operation but
-    // do not `await` it. Error handling (showing toasts, adding to a retry
-    // queue) is managed within the AuthContext.
-    // We also add basic timing logs to measure the API call duration.
-    const saveOperation = async () => {
-      console.time("updateUser-age-save")
-      try {
-        await updateUser({
-          profile: {
-            age,
-          },
-        })
-      } finally {
-        console.timeEnd("updateUser-age-save")
-      }
-    }
-
-    // Run the save operation in the background.
-    void saveOperation()
+    // Fire-and-forget the update.
+    // The updateUser function will optimistically update the state and
+    // revert it if the database call fails.
+    void updateUser({
+      profile: {
+        age,
+      },
+    })
   }
 
   return (

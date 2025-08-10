@@ -18,7 +18,7 @@ const genderOptions: { value: UserProfile["gender"]; label: string; icon: string
 ]
 
 export default function OnboardingGenderPage() {
-  const { user, updateUser, setLocalUserProfile } = useAuth()
+  const { user, updateUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [gender, setGender] = useState<UserProfile["gender"]>(user?.profile.gender)
@@ -35,24 +35,13 @@ export default function OnboardingGenderPage() {
       return
     }
 
-    // Optimistic update, instant navigation, and background save
-    setLocalUserProfile({ gender })
     router.push("/onboarding/height")
 
-    const saveOperation = async () => {
-      console.time("updateUser-gender-save")
-      try {
-        await updateUser({
-          profile: {
-            gender,
-          },
-        })
-      } finally {
-        console.timeEnd("updateUser-gender-save")
-      }
-    }
-
-    void saveOperation()
+    void updateUser({
+      profile: {
+        gender,
+      },
+    })
   }
 
   return (

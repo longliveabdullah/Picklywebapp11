@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingWeightPage() {
-  const { user, updateUser, setLocalUserProfile } = useAuth()
+  const { user, updateUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [weight, setWeight] = useState<number | undefined>(user?.profile.weight)
@@ -29,27 +29,16 @@ export default function OnboardingWeightPage() {
       return
     }
 
-    // Optimistically update the weight in the local state.
-    // The `onboardingComplete` flag will be set in the background.
-    setLocalUserProfile({ weight })
     router.push("/onboarding/complete")
 
-    // In the background, update both the weight and mark onboarding as complete.
-    const saveOperation = async () => {
-      console.time("updateUser-weight-save")
-      try {
-        await updateUser({
-          onboardingComplete: true,
-          profile: {
-            weight,
-          },
-        })
-      } finally {
-        console.timeEnd("updateUser-weight-save")
-      }
-    }
-
-    void saveOperation()
+    // Fire-and-forget. `updateUser` handles the optimistic update
+    // of both weight and the onboardingComplete flag.
+    void updateUser({
+      onboardingComplete: true,
+      profile: {
+        weight,
+      },
+    })
   }
 
   return (

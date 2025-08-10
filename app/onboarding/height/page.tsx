@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingHeightPage() {
-  const { user, updateUser, setLocalUserProfile } = useAuth()
+  const { user, updateUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [height, setHeight] = useState<number | undefined>(user?.profile.height)
@@ -29,24 +29,13 @@ export default function OnboardingHeightPage() {
       return
     }
 
-    // Optimistic update, instant navigation, and background save
-    setLocalUserProfile({ height })
     router.push("/onboarding/weight")
 
-    const saveOperation = async () => {
-      console.time("updateUser-height-save")
-      try {
-        await updateUser({
-          profile: {
-            height,
-          },
-        })
-      } finally {
-        console.timeEnd("updateUser-height-save")
-      }
-    }
-
-    void saveOperation()
+    void updateUser({
+      profile: {
+        height,
+      },
+    })
   }
 
   const getHeightCategory = (height: number) => {
