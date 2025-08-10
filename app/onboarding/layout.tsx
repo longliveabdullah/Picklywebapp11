@@ -4,9 +4,8 @@ import { OnboardingProgress } from "./onboarding-progress"
 
 export default function OnboardingLayout({ children }: { children: ReactNode }) {
   return (
-    // Removed relative and overflow-hidden as the animated background is gone
-    <div className="flex min-h-screen flex-col">
-      {/* <AnimatedBackground /> Removed for performance */}
+    // Added the new gradient class to the root element
+    <div className="flex min-h-screen flex-col bg-onboarding-gradient">
       <div className="relative z-10 flex min-h-screen flex-col">
         <div className="container flex h-20 items-center justify-center">
           <Logo />
