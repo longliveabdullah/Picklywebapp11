@@ -229,17 +229,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = async (updates: Partial<User>) => {
     if (!user) return
 
-    const originalUser = user
-
-    // Perform a deep merge for the optimistic update
-    const newUser = {
-      ...originalUser,
-      ...updates,
-      profile: updates.profile
-        ? { ...originalUser.profile, ...updates.profile }
-        : originalUser.profile,
-    }
-    setUser(newUser)
+    const previousUser = user
+    setUser({ ...user, ...updates })
 
     try {
       const updatePromises: Promise<unknown>[] = []
@@ -260,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       // If the update fails, revert the user state and show a toast
       console.error("Update user failed, reverting optimistic update:", error)
-      setUser(originalUser)
+      setUser(previousUser)
       toast({
         title: "Update Failed",
         description: "Your changes could not be saved. Please try again.",
