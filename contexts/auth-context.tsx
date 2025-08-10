@@ -31,40 +31,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is logged in
-    const checkAuth = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession()
-
-        if (error) {
-          console.error("Session error:", error)
-          return
-        }
-
-        if (session?.user) {
-          await loadUserData(session.user.id, session.user.email!)
-        }
-      } catch (error) {
-        console.error("Authentication error:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    checkAuth()
-
-    // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session?.user?.email)
-
-      if (event === "SIGNED_IN" && session?.user) {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
         await loadUserData(session.user.id, session.user.email!)
-      } else if (event === "SIGNED_OUT") {
+      } else {
         setUser(null)
       }
       setLoading(false)
@@ -229,17 +201,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = async (updates: Partial<User>) => {
     if (!user) return
 
-    const originalUser = user
-
-    // Perform a deep merge for the optimistic update
-    const newUser = {
-      ...originalUser,
-      ...updates,
-      profile: updates.profile
-        ? { ...originalUser.profile, ...updates.profile }
-        : originalUser.profile,
-    }
-    setUser(newUser)
+    const previousUser = user
+    setUser({ ...user, ...updates })
 
     try {
       const updatePromises: Promise<unknown>[] = []
@@ -260,7 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       // If the update fails, revert the user state and show a toast
       console.error("Update user failed, reverting optimistic update:", error)
-      setUser(originalUser)
+      setUser(previousUser)
       toast({
         title: "Update Failed",
         description: "Your changes could not be saved. Please try again.",
