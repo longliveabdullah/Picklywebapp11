@@ -160,8 +160,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const verifySessionPersistence = async (userId: string) => {
-    const MAX_RETRIES = 3
-    const INITIAL_DELAY_MS = 50
+    const MAX_RETRIES = Number(process.env.NEXT_PUBLIC_PERSISTENCE_MAX_RETRIES) || 3
+    const INITIAL_DELAY_MS = Number(process.env.NEXT_PUBLIC_PERSISTENCE_INITIAL_DELAY_MS) || 100
+
     for (let i = 0; i < MAX_RETRIES; i++) {
       const { data } = await supabase.auth.getSession()
       if (data.session?.user?.id === userId) {
