@@ -154,6 +154,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const verifySessionPersistence = async (userId: string) => {
+    const MAX_RETRIES = 3
+    const INITIAL_DELAY_MS = 50
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      const { data } = await supabase.auth.getSession()
+      if (data.session?.user?.id === userId) {
+        console.log(`SignIn: Session persistence verified after ${i + 1} attempt(s).`)
+        return
+      }
+      const delay = INITIAL_DELAY_MS * Math.pow(2, i)
+      console.log(`SignIn: Session not yet persisted. Retrying in ${delay}ms...`)
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+    throw new Error("Session could not be verified after sign-in.")
+  }
+
   const signIn = async (email: string, password: string) => {
     setLoading(true)
     console.log("SignIn: Attempting to sign in...")
@@ -184,8 +200,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(getAuthErrorMessage(error || new Error("Missing session data.")))
       }
 
-      // --- Step 2: Determine Navigation Path ---
       const { user } = data
+
+      // --- Step 2: Verify session persistence ---
+      await verifySessionPersistence(user.id)
+
+      // --- Step 3: Determine Navigation Path ---
       console.log("SignIn: Auth successful for user:", user.email)
       try {
         const userData = await (async () => {
