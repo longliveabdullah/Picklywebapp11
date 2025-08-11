@@ -31,19 +31,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
+    // --- 1. Initial Session Check with Timeout ---
+    const initializeAuth = async () => {
+      const SESSION_CHECK_TIMEOUT_MS = 3000
+      console.log("Auth: Starting initial session check...")
+
+      const checkPromise = supabase.auth.getSession()
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), SESSION_CHECK_TIMEOUT_MS),
+      )
+
+      try {
+        // Use Promise.race to compete the session check against the timeout
+        const {
+          data: { session },
+          error,
+        } = await Promise.race([checkPromise, timeoutPromise])
+
+        if (error) {
+          console.error("Auth: Error during initial session check.", error)
+          setUser(null)
+          return // Exit on error
+        }
+
+        if (session?.user) {
+          console.log("Auth: Initial session found for user:", session.user.email)
+          await loadUserData(session.user.id, session.user.email!)
+        } else {
+          console.log("Auth: No initial session found.")
+          setUser(null)
+        }
+      } catch (error) {
+        if (error.message === "Timeout") {
+          console.warn(
+            `Auth: Initial session check timed out after ${SESSION_CHECK_TIMEOUT_MS}ms. Assuming no session.`,
+          )
+        } else {
+          console.error("Auth: Unexpected error during initial session check.", error)
+        }
+        setUser(null) // Default to no session on timeout or unexpected error
+      } finally {
+        // This block ensures the loading spinner is always removed after the initial check.
+        console.log("Auth: Initial session check complete. Setting loading to false.")
+        setLoading(false)
+      }
+    }
+
+    initializeAuth()
+
+    // --- 2. Real-time Subscription for Auth State Changes ---
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // The initial session is handled by initializeAuth(). This listener only handles subsequent changes.
+      if (event === "INITIAL_SESSION") {
+        return
+      }
+
+      console.log("Auth: onAuthStateChange event received:", event)
       if (session?.user) {
+        console.log("Auth: Session updated for user:", session.user.email)
+        // Load user data on SIGNED_IN or USER_UPDATED to ensure profile is fresh
         await loadUserData(session.user.id, session.user.email!)
-      } else {
+      } else if (event === "SIGNED_OUT") {
+        console.log("Auth: User signed out.")
         setUser(null)
       }
-      setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
-  }, [])
+    // --- 3. Cleanup ---
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, []) // Empty dependency array ensures this runs only once on mount
 
   const loadUserData = async (userId: string, email: string) => {
     try {
