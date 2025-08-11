@@ -46,7 +46,7 @@ export default function AuthCallback() {
 
         await Promise.race([callbackPromise, timeoutPromise])
       } catch (error) {
-        console.error("Auth callback failed:", error)
+        logger.error("Auth callback failed:", error)
         if (isMounted) {
           const queryParam = error.message === "Timeout" ? "callback_timeout" : "callback_error"
           router.push(`/?error=${queryParam}`)

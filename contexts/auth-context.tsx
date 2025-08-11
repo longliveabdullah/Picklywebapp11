@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })()
 
         if (error) {
-          console.error("Auth: Error during initial session check.", error)
+          logger.error("Auth: Error during initial session check.", error)
           safeSetUser(null)
           return
         }
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           safeSetUser(null)
         }
       } catch (error) {
-        console.error("Auth: Unexpected error during initial session check.", error)
+        logger.error("Auth: Unexpected error during initial session check.", error)
         safeSetUser(null)
       } finally {
         logger.log("Auth: Initial session check complete. Setting loading to false.")
@@ -108,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
       subscription = data?.subscription
     } catch (error) {
-      console.error("Auth: Failed to subscribe to onAuthStateChange.", error)
+      logger.error("Auth: Failed to subscribe to onAuthStateChange.", error)
     }
 
     // --- 3. Cleanup ---
@@ -148,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile: profileData || {},
       })
     } catch (error) {
-      console.error("Error loading user data:", error)
+      logger.error("Error loading user data:", error)
       setter({
         id: userId,
         email: email,
@@ -203,7 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       logger.log("SignIn: Received response from Supabase.", { hasData: !!data, hasError: !!error })
       if (error || !data?.session || !data?.user) {
-        console.error("SignIn: Supabase auth error or missing session/user.", error)
+        logger.error("SignIn: Supabase auth error or missing session/user.", error)
         throw new Error(getAuthErrorMessage(error || new Error("Missing session data.")))
       }
 
@@ -235,7 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           router.push("/home")
         }
       } catch (e) {
-        console.error("SignIn: Failed to get user for onboarding check (or timed out). Defaulting to onboarding.", e)
+        logger.error("SignIn: Failed to get user for onboarding check (or timed out). Defaulting to onboarding.", e)
         router.push("/onboarding/age")
       }
 
@@ -243,10 +243,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
       logger.log("SignIn: Navigation triggered, loading spinner stopped.")
       loadUserData(user.id, user.email!).catch((err) => {
-        console.error("SignIn: Background loadUserData failed.", err)
+        logger.error("SignIn: Background loadUserData failed.", err)
       })
     } catch (error) {
-      console.error("SignIn: An unexpected error occurred during the sign-in process.", error)
+      logger.error("SignIn: An unexpected error occurred during the sign-in process.", error)
       if (loading) setLoading(false)
       throw error
     }
@@ -265,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (error) {
-        console.error("Sign up error:", error)
+        logger.error("Sign up error:", error)
         throw new Error(getAuthErrorMessage(error))
       }
 
@@ -274,7 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           await DatabaseService.createUser(email.trim(), data.user.id)
         } catch (dbError) {
-          logger.log("User might already exist in database:", dbError)
+          logger.error("Sign up: creating user in DB failed, but might already exist.", dbError)
         }
 
         // Check if user is immediately signed in (no email confirmation required)
@@ -291,7 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.error("Sign up error:", error)
+      logger.error("Sign up error:", error)
       throw error
     } finally {
       setLoading(false)
@@ -309,11 +309,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (error) {
-        console.error("Google sign in error:", error)
+        logger.error("Google sign in error:", error)
         throw new Error(getAuthErrorMessage(error))
       }
     } catch (error) {
-      console.error("Google sign in error:", error)
+      logger.error("Google sign in error:", error)
       setLoading(false)
       throw error
     }
@@ -328,7 +328,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       router.push("/")
     } catch (error) {
-      console.error("Sign out error:", error)
+      logger.error("Sign out error:", error)
       throw error
     } finally {
       setLoading(false)
@@ -359,7 +359,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await Promise.all(updatePromises)
     } catch (error) {
       // If the update fails, revert the user state and show a toast
-      console.error("Update user failed, reverting optimistic update:", error)
+      logger.error("Update user failed, reverting optimistic update:", error)
       setUser(previousUser)
       toast({
         title: "Update Failed",
@@ -379,7 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return
 
     try {
-      console.log("Adding scan to history:", scan)
+      logger.log("Adding scan to history:", scan)
       await DatabaseService.saveScanToHistory(
         user.id,
         scan.imageUrl,
@@ -389,23 +389,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         scan.rating.recommendations,
         scan.userProfile,
       )
-      console.log("Scan saved to history successfully")
+      logger.log("Scan saved to history successfully")
     } catch (error) {
-      console.error("Add scan to history error:", error)
+      logger.error("Add scan to history error:", error)
       throw error
     }
   }
 
   const getScanHistory = async (): Promise<ScanHistoryItem[]> => {
     if (!user) {
-      console.log("No user found, returning empty history")
+      logger.log("No user found, returning empty history")
       return []
     }
 
     try {
-      console.log("Fetching scan history for user:", user.id)
+      logger.log("Fetching scan history for user:", user.id)
       const historyData = await DatabaseService.getUserScanHistory(user.id)
-      console.log("Raw history data from database:", historyData)
+      logger.log("Raw history data from database:", historyData)
 
       const transformedHistory = historyData.map((item) => ({
         id: item.id,
@@ -420,10 +420,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userProfile: item.user_profile_snapshot as UserProfile,
       }))
 
-      console.log("Transformed history data:", transformedHistory)
+      logger.log("Transformed history data:", transformedHistory)
       return transformedHistory
     } catch (error) {
-      console.error("Get scan history error:", error)
+      logger.error("Get scan history error:", error)
       return []
     }
   }
@@ -432,11 +432,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return
 
     try {
-      console.log("Deleting scan from history:", scanId)
+      logger.log("Deleting scan from history:", scanId)
       await DatabaseService.deleteScanFromHistory(scanId, user.id)
-      console.log("Scan deleted successfully")
+      logger.log("Scan deleted successfully")
     } catch (error) {
-      console.error("Delete scan from history error:", error)
+      logger.error("Delete scan from history error:", error)
       throw error
     }
   }
