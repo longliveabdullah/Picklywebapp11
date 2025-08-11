@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // --- 3. Cleanup ---
     return () => {
       isMounted = false
-      subscription.unsubscribe()
+      subscription?.unsubscribe?.()
     }
   }, []) // Empty dependency array ensures this runs only once on mount
 
