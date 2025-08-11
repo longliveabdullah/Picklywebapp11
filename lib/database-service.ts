@@ -1,6 +1,7 @@
 import { supabase } from "./supabase"
 import type { Database } from "./database.types"
 import type { UserProfile } from "@/types"
+import { retryWithBackoff } from "./utils"
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"]
 type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"]
@@ -27,6 +28,19 @@ export class DatabaseService {
 
     if (error) throw error
     return data
+  }
+
+  static async checkOnboardingStatus(userId: string) {
+    return retryWithBackoff(async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("onboarding_complete")
+        .eq("id", userId)
+        .single()
+
+      if (error) throw error
+      return data
+    })
   }
 
   static async getUser(userId: string) {

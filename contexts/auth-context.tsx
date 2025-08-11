@@ -1,10 +1,11 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
+import { logger } from "@/lib/utils"
 import type { User, ScanHistoryItem, UserProfile } from "@/types"
 import type { AuthError } from "@supabase/supabase-js"
 import { toast } from "@/hooks/use-toast"
@@ -29,89 +30,225 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const loadingUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        await loadUserData(session.user.id, session.user.email!)
-      } else {
-        setUser(null)
+    let isMounted = true
+
+    // Create safe state setters that check if the component is still mounted
+    const safeSetUser = (user: User | null) => {
+      if (isMounted) setUser(user)
+    }
+    const safeSetLoading = (loading: boolean) => {
+      if (isMounted) setLoading(loading)
+    }
+
+    // --- 1. Initial Session Check with Timeout ---
+    const initializeAuth = async () => {
+      try {
+        logger.log("Auth: Starting initial session check...")
+        const {
+          data: { session },
+          error,
+        } = await (async () => {
+          const SESSION_CHECK_TIMEOUT_MS =
+            Number(process.env.NEXT_PUBLIC_SESSION_CHECK_TIMEOUT_MS) || 3000
+          let timeoutId: ReturnType<typeof setTimeout> | undefined
+          try {
+            const checkPromise = supabase.auth.getSession()
+            const timeoutPromise = new Promise((_, reject) => {
+              timeoutId = setTimeout(() => reject(new Error("Timeout")), SESSION_CHECK_TIMEOUT_MS)
+            })
+            return await Promise.race([checkPromise, timeoutPromise])
+          } finally {
+            clearTimeout(timeoutId)
+          }
+        })()
+
+        if (error) {
+          logger.error("Auth: Error during initial session check.", error)
+          safeSetUser(null)
+          return
+        }
+
+        if (session?.user) {
+          logger.log("Auth: Initial session found for user:", session.user.email)
+          await loadUserData(session.user.id, session.user.email!, safeSetUser)
+        } else {
+          logger.log("Auth: No initial session found.")
+          safeSetUser(null)
+        }
+      } catch (error) {
+        logger.error("Auth: Unexpected error during initial session check.", error)
+        safeSetUser(null)
+      } finally {
+        logger.log("Auth: Initial session check complete. Setting loading to false.")
+        safeSetLoading(false)
       }
-      setLoading(false)
-    })
+    }
 
-    return () => subscription.unsubscribe()
-  }, [])
+    initializeAuth()
 
-  const loadUserData = async (userId: string, email: string) => {
+    // --- 2. Real-time Subscription for Auth State Changes ---
+    let subscription: any
     try {
-      // Get user and profile data in parallel
+      const { data, error } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (!isMounted) return
+        if (event === "INITIAL_SESSION") return
+
+        logger.log("Auth: onAuthStateChange event received:", event)
+        if (session?.user) {
+          logger.log("Auth: Session updated for user:", session.user.email)
+          await loadUserData(session.user.id, session.user.email!, safeSetUser)
+        } else if (event === "SIGNED_OUT") {
+          logger.log("Auth: User signed out.")
+          safeSetUser(null)
+        }
+      })
+      if (error) throw error
+      subscription = data?.subscription
+    } catch (error) {
+      logger.error("Auth: Failed to subscribe to onAuthStateChange.", error)
+    }
+
+    // --- 3. Cleanup ---
+    return () => {
+      isMounted = false
+      subscription?.unsubscribe?.()
+    }
+  }, []) // Empty dependency array ensures this runs only once on mount
+
+  const loadUserData = async (
+    userId: string,
+    email: string,
+    setter: (user: User | null) => void = setUser,
+  ) => {
+    if (loadingUserIdRef.current === userId) {
+      logger.log(`Auth: loadUserData for ${userId} is already in progress. Skipping.`)
+      return
+    }
+    loadingUserIdRef.current = userId
+
+    try {
       const [userResult, profileData] = await Promise.all([
-        DatabaseService.getUser(userId).catch(() => null), // Return null if user doesn't exist
+        DatabaseService.getUser(userId).catch(() => null),
         DatabaseService.getUserProfile(userId),
       ])
 
       let userData = userResult
       if (!userData) {
-        // User doesn't exist in our database, create them
-        console.log("Creating new user in database:", email)
+        logger.log("Creating new user in database:", email)
         userData = await DatabaseService.createUser(email, userId)
       }
 
-      setUser({
+      setter({
         id: userData.id,
         email: userData.email,
         onboardingComplete: userData.onboarding_complete,
         profile: profileData || {},
       })
     } catch (error) {
-      console.error("Error loading user data:", error)
-      // If we can't load user data, still set basic user info
-      setUser({
+      logger.error("Error loading user data:", error)
+      setter({
         id: userId,
         email: email,
         onboardingComplete: false,
         profile: {},
       })
+    } finally {
+      loadingUserIdRef.current = null
     }
+  }
+
+  const verifySessionPersistence = async (userId: string) => {
+    const MAX_RETRIES = Number(process.env.NEXT_PUBLIC_PERSISTENCE_MAX_RETRIES) || 3
+    const INITIAL_DELAY_MS = Number(process.env.NEXT_PUBLIC_PERSISTENCE_INITIAL_DELAY_MS) || 100
+
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      const { data } = await supabase.auth.getSession()
+      if (data.session?.user?.id === userId) {
+        logger.log(`SignIn: Session persistence verified after ${i + 1} attempt(s).`)
+        return
+      }
+      const delay = INITIAL_DELAY_MS * Math.pow(2, i)
+      logger.log(`SignIn: Session not yet persisted. Retrying in ${delay}ms...`)
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+    throw new Error("Session could not be verified after sign-in.")
   }
 
   const signIn = async (email: string, password: string) => {
     setLoading(true)
+    logger.log("SignIn: Attempting to sign in...")
+    let signInTimeoutId: ReturnType<typeof setTimeout> | undefined
+    let getUserTimeoutId: ReturnType<typeof setTimeout> | undefined
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      })
-
-      if (error) {
-        console.error("Sign in error:", error)
-        throw new Error(getAuthErrorMessage(error))
-      }
-
-      if (data.user && data.session) {
-        await loadUserData(data.user.id, data.user.email!)
-
-        // Navigate based on onboarding status
+      // --- Step 1: Authenticate with Supabase ---
+      const { data, error } = await (async () => {
+        const SIGNIN_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_SIGNIN_TIMEOUT_MS) || 5000
         try {
-          const userData = await DatabaseService.getUser(data.user.id)
-          if (!userData.onboarding_complete) {
-            router.push("/onboarding/age")
-          } else {
-            router.push("/home")
-          }
-        } catch {
-          // If we can't get user data, assume onboarding needed
-          router.push("/onboarding/age")
+          const signInPromise = supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          })
+          const signInTimeoutPromise = new Promise((_, reject) => {
+            signInTimeoutId = setTimeout(() => reject(new Error("SignIn Timeout")), SIGNIN_TIMEOUT_MS)
+          })
+          return await Promise.race([signInPromise, signInTimeoutPromise])
+        } finally {
+          clearTimeout(signInTimeoutId)
         }
+      })()
+
+      logger.log("SignIn: Received response from Supabase.", { hasData: !!data, hasError: !!error })
+      if (error || !data?.session || !data?.user) {
+        logger.error("SignIn: Supabase auth error or missing session/user.", error)
+        throw new Error(getAuthErrorMessage(error || new Error("Missing session data.")))
       }
-    } catch (error) {
-      console.error("Sign in error:", error)
-      throw error
-    } finally {
+
+      const { user } = data
+
+      // --- Step 2: Verify session persistence ---
+      await verifySessionPersistence(user.id)
+
+      // --- Step 3: Determine Navigation Path ---
+      logger.log("SignIn: Auth successful for user:", user.email)
+      try {
+        const statusData = await (async () => {
+          const GET_USER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_GET_USER_TIMEOUT_MS) || 2000
+          try {
+            logger.log("SignIn: Checking onboarding status for navigation...")
+            const getStatusPromise = DatabaseService.checkOnboardingStatus(user.id)
+            const getUserTimeoutPromise = new Promise((_, reject) => {
+              getUserTimeoutId = setTimeout(() => reject(new Error("GetUser Timeout")), GET_USER_TIMEOUT_MS)
+            })
+            return await Promise.race([getStatusPromise, getUserTimeoutPromise])
+          } finally {
+            clearTimeout(getUserTimeoutId)
+          }
+        })()
+
+        if (statusData && !statusData.onboarding_complete) {
+          router.push("/onboarding/age")
+        } else {
+          router.push("/home")
+        }
+      } catch (e) {
+        logger.error("SignIn: Failed to get user for onboarding check (or timed out). Defaulting to onboarding.", e)
+        router.push("/onboarding/age")
+      }
+
+      // --- Step 3: Finalize UI and Background Sync ---
       setLoading(false)
+      logger.log("SignIn: Navigation triggered, loading spinner stopped.")
+      loadUserData(user.id, user.email!).catch((err) => {
+        logger.error("SignIn: Background loadUserData failed.", err)
+      })
+    } catch (error) {
+      logger.error("SignIn: An unexpected error occurred during the sign-in process.", error)
+      if (loading) setLoading(false)
+      throw error
     }
   }
 
@@ -128,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (error) {
-        console.error("Sign up error:", error)
+        logger.error("Sign up error:", error)
         throw new Error(getAuthErrorMessage(error))
       }
 
@@ -137,7 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           await DatabaseService.createUser(email.trim(), data.user.id)
         } catch (dbError) {
-          console.log("User might already exist in database:", dbError)
+          logger.error("Sign up: creating user in DB failed, but might already exist.", dbError)
         }
 
         // Check if user is immediately signed in (no email confirmation required)
@@ -154,7 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.error("Sign up error:", error)
+      logger.error("Sign up error:", error)
       throw error
     } finally {
       setLoading(false)
@@ -172,11 +309,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (error) {
-        console.error("Google sign in error:", error)
+        logger.error("Google sign in error:", error)
         throw new Error(getAuthErrorMessage(error))
       }
     } catch (error) {
-      console.error("Google sign in error:", error)
+      logger.error("Google sign in error:", error)
       setLoading(false)
       throw error
     }
@@ -191,7 +328,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       router.push("/")
     } catch (error) {
-      console.error("Sign out error:", error)
+      logger.error("Sign out error:", error)
       throw error
     } finally {
       setLoading(false)
@@ -222,7 +359,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await Promise.all(updatePromises)
     } catch (error) {
       // If the update fails, revert the user state and show a toast
-      console.error("Update user failed, reverting optimistic update:", error)
+      logger.error("Update user failed, reverting optimistic update:", error)
       setUser(previousUser)
       toast({
         title: "Update Failed",
@@ -242,7 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return
 
     try {
-      console.log("Adding scan to history:", scan)
+      logger.log("Adding scan to history:", scan)
       await DatabaseService.saveScanToHistory(
         user.id,
         scan.imageUrl,
@@ -252,23 +389,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         scan.rating.recommendations,
         scan.userProfile,
       )
-      console.log("Scan saved to history successfully")
+      logger.log("Scan saved to history successfully")
     } catch (error) {
-      console.error("Add scan to history error:", error)
+      logger.error("Add scan to history error:", error)
       throw error
     }
   }
 
   const getScanHistory = async (): Promise<ScanHistoryItem[]> => {
     if (!user) {
-      console.log("No user found, returning empty history")
+      logger.log("No user found, returning empty history")
       return []
     }
 
     try {
-      console.log("Fetching scan history for user:", user.id)
+      logger.log("Fetching scan history for user:", user.id)
       const historyData = await DatabaseService.getUserScanHistory(user.id)
-      console.log("Raw history data from database:", historyData)
+      logger.log("Raw history data from database:", historyData)
 
       const transformedHistory = historyData.map((item) => ({
         id: item.id,
@@ -283,10 +420,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userProfile: item.user_profile_snapshot as UserProfile,
       }))
 
-      console.log("Transformed history data:", transformedHistory)
+      logger.log("Transformed history data:", transformedHistory)
       return transformedHistory
     } catch (error) {
-      console.error("Get scan history error:", error)
+      logger.error("Get scan history error:", error)
       return []
     }
   }
@@ -295,11 +432,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return
 
     try {
-      console.log("Deleting scan from history:", scanId)
+      logger.log("Deleting scan from history:", scanId)
       await DatabaseService.deleteScanFromHistory(scanId, user.id)
-      console.log("Scan deleted successfully")
+      logger.log("Scan deleted successfully")
     } catch (error) {
-      console.error("Delete scan from history error:", error)
+      logger.error("Delete scan from history error:", error)
       throw error
     }
   }

@@ -4,54 +4,63 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
+import { logger } from "@/lib/utils"
 
 export default function AuthCallback() {
   const router = useRouter()
 
   useEffect(() => {
+    let isMounted = true
+
     const handleAuthCallback = async () => {
+      const CALLBACK_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_CALLBACK_TIMEOUT_MS) || 8000
+      let timeoutId: ReturnType<typeof setTimeout> | undefined
+
       try {
-        const { data, error } = await supabase.auth.getSession()
+        const callbackPromise = (async () => {
+          const { data, error } = await supabase.auth.getSession()
+          if (error) throw new Error("Auth callback error: " + error.message)
+          if (!data.session?.user) throw new Error("No session found after callback.")
 
-        if (error) {
-          console.error("Auth callback error:", error)
-          router.push("/?error=auth_error")
-          return
-        }
-
-        if (data.session?.user) {
-          const user = data.session.user
-
-          // Ensure user exists in our database
+          const { user } = data.session
           try {
             await DatabaseService.getUser(user.id)
           } catch {
-            // User doesn't exist, create them
+            logger.log("User not found in DB, creating new user entry.")
             await DatabaseService.createUser(user.email!, user.id)
           }
 
-          // Check onboarding status
-          try {
-            const userData = await DatabaseService.getUser(user.id)
+          const userData = await DatabaseService.getUser(user.id)
+          if (isMounted) {
             if (!userData.onboarding_complete) {
               router.push("/onboarding/age")
             } else {
               router.push("/home")
             }
-          } catch {
-            // If we can't get user data, assume onboarding needed
-            router.push("/onboarding/age")
           }
-        } else {
-          router.push("/")
-        }
+        })()
+
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error("Timeout")), CALLBACK_TIMEOUT_MS)
+        })
+
+        await Promise.race([callbackPromise, timeoutPromise])
       } catch (error) {
-        console.error("Auth callback error:", error)
-        router.push("/?error=callback_error")
+        logger.error("Auth callback failed:", error)
+        if (isMounted) {
+          const queryParam = error.message === "Timeout" ? "callback_timeout" : "callback_error"
+          router.push(`/?error=${queryParam}`)
+        }
+      } finally {
+        clearTimeout(timeoutId)
       }
     }
 
     handleAuthCallback()
+
+    return () => {
+      isMounted = false
+    }
   }, [router])
 
   return (
