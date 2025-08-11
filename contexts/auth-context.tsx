@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const loadingUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -116,6 +117,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     setter: (user: User | null) => void = setUser,
   ) => {
+    if (loadingUserIdRef.current === userId) {
+      console.log(`Auth: loadUserData for ${userId} is already in progress. Skipping.`)
+      return
+    }
+    loadingUserIdRef.current = userId
+
     try {
       const [userResult, profileData] = await Promise.all([
         DatabaseService.getUser(userId).catch(() => null),
@@ -142,6 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onboardingComplete: false,
         profile: {},
       })
+    } finally {
+      loadingUserIdRef.current = null
     }
   }
 
