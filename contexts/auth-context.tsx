@@ -208,20 +208,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // --- Step 3: Determine Navigation Path ---
       console.log("SignIn: Auth successful for user:", user.email)
       try {
-        const userData = await (async () => {
+        const statusData = await (async () => {
           const GET_USER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_GET_USER_TIMEOUT_MS) || 2000
           try {
-            const getUserPromise = DatabaseService.getUser(user.id)
+            const getStatusPromise = DatabaseService.checkOnboardingStatus(user.id)
             const getUserTimeoutPromise = new Promise((_, reject) => {
               getUserTimeoutId = setTimeout(() => reject(new Error("GetUser Timeout")), GET_USER_TIMEOUT_MS)
             })
-            return await Promise.race([getUserPromise, getUserTimeoutPromise])
+            return await Promise.race([getStatusPromise, getUserTimeoutPromise])
           } finally {
             clearTimeout(getUserTimeoutId)
           }
         })()
 
-        if (userData && !userData.onboarding_complete) {
+        if (statusData && !statusData.onboarding_complete) {
           router.push("/onboarding/age")
         } else {
           router.push("/home")
