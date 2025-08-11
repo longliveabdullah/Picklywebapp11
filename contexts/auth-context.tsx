@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = await (async () => {
           const SESSION_CHECK_TIMEOUT_MS =
             Number(process.env.NEXT_PUBLIC_SESSION_CHECK_TIMEOUT_MS) || 3000
-          let timeoutId: NodeJS.Timeout | undefined
+          let timeoutId: ReturnType<typeof setTimeout> | undefined
           try {
             const checkPromise = supabase.auth.getSession()
             const timeoutPromise = new Promise((_, reject) => {
@@ -173,8 +173,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     setLoading(true)
     console.log("SignIn: Attempting to sign in...")
-    let signInTimeoutId: NodeJS.Timeout | undefined
-    let getUserTimeoutId: NodeJS.Timeout | undefined
+    let signInTimeoutId: ReturnType<typeof setTimeout> | undefined
+    let getUserTimeoutId: ReturnType<typeof setTimeout> | undefined
 
     try {
       // --- Step 1: Authenticate with Supabase ---

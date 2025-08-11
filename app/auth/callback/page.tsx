@@ -13,7 +13,7 @@ export default function AuthCallback() {
 
     const handleAuthCallback = async () => {
       const CALLBACK_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_CALLBACK_TIMEOUT_MS) || 8000
-      let timeoutId: NodeJS.Timeout | undefined
+      let timeoutId: ReturnType<typeof setTimeout> | undefined
 
       try {
         const callbackPromise = (async () => {
