@@ -89,21 +89,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth()
 
     // --- 2. Real-time Subscription for Auth State Changes ---
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!isMounted) return
-      if (event === "INITIAL_SESSION") return
+    let subscription: any
+    try {
+      const { data, error } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (!isMounted) return
+        if (event === "INITIAL_SESSION") return
 
-      console.log("Auth: onAuthStateChange event received:", event)
-      if (session?.user) {
-        console.log("Auth: Session updated for user:", session.user.email)
-        await loadUserData(session.user.id, session.user.email!, safeSetUser)
-      } else if (event === "SIGNED_OUT") {
-        console.log("Auth: User signed out.")
-        safeSetUser(null)
-      }
-    })
+        console.log("Auth: onAuthStateChange event received:", event)
+        if (session?.user) {
+          console.log("Auth: Session updated for user:", session.user.email)
+          await loadUserData(session.user.id, session.user.email!, safeSetUser)
+        } else if (event === "SIGNED_OUT") {
+          console.log("Auth: User signed out.")
+          safeSetUser(null)
+        }
+      })
+      if (error) throw error
+      subscription = data?.subscription
+    } catch (error) {
+      console.error("Auth: Failed to subscribe to onAuthStateChange.", error)
+    }
 
     // --- 3. Cleanup ---
     return () => {
