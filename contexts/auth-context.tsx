@@ -140,38 +140,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     setLoading(true)
+    console.log("SignIn: Attempting to sign in...")
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const signInPromise = supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("SignIn Timeout")), 5000),
+      )
+      const { data, error } = await Promise.race([signInPromise, timeoutPromise])
 
-      if (error) {
-        console.error("Sign in error:", error)
-        throw new Error(getAuthErrorMessage(error))
+      console.log("SignIn: Received response from Supabase.", {
+        hasData: !!data,
+        hasSession: !!data?.session,
+        hasUser: !!data?.user,
+        hasError: !!error,
+      })
+
+      if (error || !data.session || !data.user) {
+        console.error("SignIn: Supabase auth error or missing session/user.", error)
+        setLoading(false) // Stop loading on failure
+        throw new Error(getAuthErrorMessage(error || new Error("Missing session data.")))
       }
 
-      if (data.user && data.session) {
-        await loadUserData(data.user.id, data.user.email!)
+      // --- Non-blocking flow starts here ---
+      const { user, session } = data
+      console.log("SignIn: Auth successful. Session received for user:", user.email)
 
-        // Navigate based on onboarding status
-        try {
-          const userData = await DatabaseService.getUser(data.user.id)
-          if (!userData.onboarding_complete) {
-            router.push("/onboarding/age")
-          } else {
-            router.push("/home")
-          }
-        } catch {
-          // If we can't get user data, assume onboarding needed
+      // 1. Determine navigation path with a fast, blocking call + timeout
+      try {
+        const getUserPromise = DatabaseService.getUser(user.id)
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+
+        console.log("SignIn: Checking onboarding status for navigation...")
+        const userData = await Promise.race([getUserPromise, timeoutPromise])
+
+        if (!userData.onboarding_complete) {
+          console.log("SignIn: User has not completed onboarding. Redirecting to /onboarding/age.")
           router.push("/onboarding/age")
+        } else {
+          console.log("SignIn: User has completed onboarding. Redirecting to /home.")
+          router.push("/home")
         }
+      } catch (e) {
+        console.error("SignIn: Failed to get user for onboarding check (or timed out). Defaulting to onboarding.", e)
+        router.push("/onboarding/age") // Default to onboarding on failure or timeout
       }
-    } catch (error) {
-      console.error("Sign in error:", error)
-      throw error
-    } finally {
+
+      // 2. Stop the loading spinner immediately after navigation is triggered
       setLoading(false)
+      console.log("SignIn: Navigation triggered, loading spinner stopped.")
+
+      // 3. Sync full user profile in the background (fire-and-forget)
+      console.log("SignIn: Starting background user data sync.")
+      loadUserData(user.id, user.email!).catch((err) => {
+        console.error("SignIn: Background loadUserData failed.", err)
+      })
+    } catch (error) {
+      console.error("SignIn: An unexpected error occurred during the sign-in process.", error)
+      // Ensure loading is off even if an error is thrown
+      if (loading) setLoading(false)
+      throw error
     }
   }
 
