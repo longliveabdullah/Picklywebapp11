@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
+import { logger } from "@/lib/utils"
 import type { User, ScanHistoryItem, UserProfile } from "@/types"
 import type { AuthError } from "@supabase/supabase-js"
 import { toast } from "@/hooks/use-toast"
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // --- 1. Initial Session Check with Timeout ---
     const initializeAuth = async () => {
       try {
-        console.log("Auth: Starting initial session check...")
+        logger.log("Auth: Starting initial session check...")
         const {
           data: { session },
           error,
@@ -71,17 +72,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (session?.user) {
-          console.log("Auth: Initial session found for user:", session.user.email)
+          logger.log("Auth: Initial session found for user:", session.user.email)
           await loadUserData(session.user.id, session.user.email!, safeSetUser)
         } else {
-          console.log("Auth: No initial session found.")
+          logger.log("Auth: No initial session found.")
           safeSetUser(null)
         }
       } catch (error) {
         console.error("Auth: Unexpected error during initial session check.", error)
         safeSetUser(null)
       } finally {
-        console.log("Auth: Initial session check complete. Setting loading to false.")
+        logger.log("Auth: Initial session check complete. Setting loading to false.")
         safeSetLoading(false)
       }
     }
@@ -95,12 +96,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!isMounted) return
         if (event === "INITIAL_SESSION") return
 
-        console.log("Auth: onAuthStateChange event received:", event)
+        logger.log("Auth: onAuthStateChange event received:", event)
         if (session?.user) {
-          console.log("Auth: Session updated for user:", session.user.email)
+          logger.log("Auth: Session updated for user:", session.user.email)
           await loadUserData(session.user.id, session.user.email!, safeSetUser)
         } else if (event === "SIGNED_OUT") {
-          console.log("Auth: User signed out.")
+          logger.log("Auth: User signed out.")
           safeSetUser(null)
         }
       })
@@ -123,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setter: (user: User | null) => void = setUser,
   ) => {
     if (loadingUserIdRef.current === userId) {
-      console.log(`Auth: loadUserData for ${userId} is already in progress. Skipping.`)
+      logger.log(`Auth: loadUserData for ${userId} is already in progress. Skipping.`)
       return
     }
     loadingUserIdRef.current = userId
@@ -136,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       let userData = userResult
       if (!userData) {
-        console.log("Creating new user in database:", email)
+        logger.log("Creating new user in database:", email)
         userData = await DatabaseService.createUser(email, userId)
       }
 
@@ -166,11 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     for (let i = 0; i < MAX_RETRIES; i++) {
       const { data } = await supabase.auth.getSession()
       if (data.session?.user?.id === userId) {
-        console.log(`SignIn: Session persistence verified after ${i + 1} attempt(s).`)
+        logger.log(`SignIn: Session persistence verified after ${i + 1} attempt(s).`)
         return
       }
       const delay = INITIAL_DELAY_MS * Math.pow(2, i)
-      console.log(`SignIn: Session not yet persisted. Retrying in ${delay}ms...`)
+      logger.log(`SignIn: Session not yet persisted. Retrying in ${delay}ms...`)
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
     throw new Error("Session could not be verified after sign-in.")
@@ -178,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     setLoading(true)
-    console.log("SignIn: Attempting to sign in...")
+    logger.log("SignIn: Attempting to sign in...")
     let signInTimeoutId: ReturnType<typeof setTimeout> | undefined
     let getUserTimeoutId: ReturnType<typeof setTimeout> | undefined
 
@@ -200,7 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })()
 
-      console.log("SignIn: Received response from Supabase.", { hasData: !!data, hasError: !!error })
+      logger.log("SignIn: Received response from Supabase.", { hasData: !!data, hasError: !!error })
       if (error || !data?.session || !data?.user) {
         console.error("SignIn: Supabase auth error or missing session/user.", error)
         throw new Error(getAuthErrorMessage(error || new Error("Missing session data.")))
@@ -212,11 +213,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await verifySessionPersistence(user.id)
 
       // --- Step 3: Determine Navigation Path ---
-      console.log("SignIn: Auth successful for user:", user.email)
+      logger.log("SignIn: Auth successful for user:", user.email)
       try {
         const statusData = await (async () => {
           const GET_USER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_GET_USER_TIMEOUT_MS) || 2000
           try {
+            logger.log("SignIn: Checking onboarding status for navigation...")
             const getStatusPromise = DatabaseService.checkOnboardingStatus(user.id)
             const getUserTimeoutPromise = new Promise((_, reject) => {
               getUserTimeoutId = setTimeout(() => reject(new Error("GetUser Timeout")), GET_USER_TIMEOUT_MS)
@@ -239,7 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // --- Step 3: Finalize UI and Background Sync ---
       setLoading(false)
-      console.log("SignIn: Navigation triggered, loading spinner stopped.")
+      logger.log("SignIn: Navigation triggered, loading spinner stopped.")
       loadUserData(user.id, user.email!).catch((err) => {
         console.error("SignIn: Background loadUserData failed.", err)
       })
@@ -272,7 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           await DatabaseService.createUser(email.trim(), data.user.id)
         } catch (dbError) {
-          console.log("User might already exist in database:", dbError)
+          logger.log("User might already exist in database:", dbError)
         }
 
         // Check if user is immediately signed in (no email confirmation required)

@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
+import { logger } from "@/lib/utils"
 
 export default function AuthCallback() {
   const router = useRouter()
@@ -25,7 +26,7 @@ export default function AuthCallback() {
           try {
             await DatabaseService.getUser(user.id)
           } catch {
-            console.log("User not found in DB, creating new user entry.")
+            logger.log("User not found in DB, creating new user entry.")
             await DatabaseService.createUser(user.email!, user.id)
           }
 

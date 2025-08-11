@@ -5,6 +5,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export const logger = {
+  log: (...args: any[]) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.log(...args)
+    }
+  },
+  warn: (...args: any[]) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(...args)
+    }
+  },
+  error: (...args: any[]) => {
+    // Errors should be logged in all environments
+    console.error(...args)
+  },
+}
+
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   retries = 3,
