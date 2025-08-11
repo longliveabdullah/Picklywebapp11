@@ -31,18 +31,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
+    let isMounted = true
+    let sessionTimeoutId: NodeJS.Timeout
+
+    // Create safe state setters that check if the component is still mounted
+    const safeSetUser = (user: User | null) => {
+      if (isMounted) setUser(user)
+    }
+    const safeSetLoading = (loading: boolean) => {
+      if (isMounted) setLoading(loading)
+    }
+
     // --- 1. Initial Session Check with Timeout ---
     const initializeAuth = async () => {
       const SESSION_CHECK_TIMEOUT_MS = 3000
       console.log("Auth: Starting initial session check...")
 
       const checkPromise = supabase.auth.getSession()
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), SESSION_CHECK_TIMEOUT_MS),
-      )
+      const timeoutPromise = new Promise((_, reject) => {
+        sessionTimeoutId = setTimeout(
+          () => reject(new Error("Timeout")),
+          SESSION_CHECK_TIMEOUT_MS,
+        )
+      })
 
       try {
-        // Use Promise.race to compete the session check against the timeout
         const {
           data: { session },
           error,
@@ -50,16 +63,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (error) {
           console.error("Auth: Error during initial session check.", error)
-          setUser(null)
-          return // Exit on error
+          safeSetUser(null)
+          return
         }
 
         if (session?.user) {
           console.log("Auth: Initial session found for user:", session.user.email)
-          await loadUserData(session.user.id, session.user.email!)
+          await loadUserData(session.user.id, session.user.email!, safeSetUser)
         } else {
           console.log("Auth: No initial session found.")
-          setUser(null)
+          safeSetUser(null)
         }
       } catch (error) {
         if (error.message === "Timeout") {
@@ -69,11 +82,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           console.error("Auth: Unexpected error during initial session check.", error)
         }
-        setUser(null) // Default to no session on timeout or unexpected error
+        safeSetUser(null)
       } finally {
-        // This block ensures the loading spinner is always removed after the initial check.
         console.log("Auth: Initial session check complete. Setting loading to false.")
-        setLoading(false)
+        safeSetLoading(false)
       }
     }
 
@@ -83,44 +95,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // The initial session is handled by initializeAuth(). This listener only handles subsequent changes.
-      if (event === "INITIAL_SESSION") {
-        return
-      }
+      if (!isMounted) return
+      if (event === "INITIAL_SESSION") return
 
       console.log("Auth: onAuthStateChange event received:", event)
       if (session?.user) {
         console.log("Auth: Session updated for user:", session.user.email)
-        // Load user data on SIGNED_IN or USER_UPDATED to ensure profile is fresh
-        await loadUserData(session.user.id, session.user.email!)
+        await loadUserData(session.user.id, session.user.email!, safeSetUser)
       } else if (event === "SIGNED_OUT") {
         console.log("Auth: User signed out.")
-        setUser(null)
+        safeSetUser(null)
       }
     })
 
     // --- 3. Cleanup ---
     return () => {
+      isMounted = false
+      clearTimeout(sessionTimeoutId)
       subscription.unsubscribe()
     }
   }, []) // Empty dependency array ensures this runs only once on mount
 
-  const loadUserData = async (userId: string, email: string) => {
+  const loadUserData = async (
+    userId: string,
+    email: string,
+    setter: (user: User | null) => void = setUser,
+  ) => {
     try {
-      // Get user and profile data in parallel
       const [userResult, profileData] = await Promise.all([
-        DatabaseService.getUser(userId).catch(() => null), // Return null if user doesn't exist
+        DatabaseService.getUser(userId).catch(() => null),
         DatabaseService.getUserProfile(userId),
       ])
 
       let userData = userResult
       if (!userData) {
-        // User doesn't exist in our database, create them
         console.log("Creating new user in database:", email)
         userData = await DatabaseService.createUser(email, userId)
       }
 
-      setUser({
+      setter({
         id: userData.id,
         email: userData.email,
         onboardingComplete: userData.onboarding_complete,
@@ -128,8 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
     } catch (error) {
       console.error("Error loading user data:", error)
-      // If we can't load user data, still set basic user info
-      setUser({
+      setter({
         id: userId,
         email: email,
         onboardingComplete: false,
