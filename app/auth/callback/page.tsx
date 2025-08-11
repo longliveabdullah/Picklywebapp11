@@ -9,58 +9,57 @@ export default function AuthCallback() {
   const router = useRouter()
 
   useEffect(() => {
-    const CALLBACK_TIMEOUT_MS = 8000 // 8 seconds
+    let isMounted = true
 
     const handleAuthCallback = async () => {
+      const CALLBACK_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_CALLBACK_TIMEOUT_MS) || 8000
+      let timeoutId: NodeJS.Timeout | undefined
+
       try {
-        const { data, error } = await supabase.auth.getSession()
+        const callbackPromise = (async () => {
+          const { data, error } = await supabase.auth.getSession()
+          if (error) throw new Error("Auth callback error: " + error.message)
+          if (!data.session?.user) throw new Error("No session found after callback.")
 
-        if (error) {
-          console.error("Auth callback error:", error)
-          router.push("/?error=auth_error")
-          return
-        }
-
-        if (data.session?.user) {
-          const user = data.session.user
-
-          // Ensure user exists in our database
+          const { user } = data.session
           try {
             await DatabaseService.getUser(user.id)
           } catch {
-            // User doesn't exist, create them
             console.log("User not found in DB, creating new user entry.")
             await DatabaseService.createUser(user.email!, user.id)
           }
 
-          // Check onboarding status
           const userData = await DatabaseService.getUser(user.id)
-          if (!userData.onboarding_complete) {
-            router.push("/onboarding/age")
-          } else {
-            router.push("/home")
+          if (isMounted) {
+            if (!userData.onboarding_complete) {
+              router.push("/onboarding/age")
+            } else {
+              router.push("/home")
+            }
           }
-        } else {
-          // No session found after callback, redirect to home
-          router.push("/")
-        }
+        })()
+
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error("Timeout")), CALLBACK_TIMEOUT_MS)
+        })
+
+        await Promise.race([callbackPromise, timeoutPromise])
       } catch (error) {
-        console.error("Auth callback error:", error)
-        router.push("/?error=callback_error")
+        console.error("Auth callback failed:", error)
+        if (isMounted) {
+          const queryParam = error.message === "Timeout" ? "callback_timeout" : "callback_error"
+          router.push(`/?error=${queryParam}`)
+        }
+      } finally {
+        clearTimeout(timeoutId)
       }
     }
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout")), CALLBACK_TIMEOUT_MS),
-    )
+    handleAuthCallback()
 
-    Promise.race([handleAuthCallback(), timeoutPromise]).catch((error) => {
-      if (error.message === "Timeout") {
-        console.warn(`Auth callback timed out after ${CALLBACK_TIMEOUT_MS}ms.`)
-        router.push("/?error=callback_timeout")
-      }
-      // Other errors are handled and redirected inside handleAuthCallback
-    })
+    return () => {
+      isMounted = false
+    }
   }, [router])
 
   return (

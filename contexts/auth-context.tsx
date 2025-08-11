@@ -32,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
-    let sessionTimeoutId: NodeJS.Timeout
 
     // Create safe state setters that check if the component is still mounted
     const safeSetUser = (user: User | null) => {
@@ -44,22 +43,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // --- 1. Initial Session Check with Timeout ---
     const initializeAuth = async () => {
-      const SESSION_CHECK_TIMEOUT_MS = 3000
-      console.log("Auth: Starting initial session check...")
-
-      const checkPromise = supabase.auth.getSession()
-      const timeoutPromise = new Promise((_, reject) => {
-        sessionTimeoutId = setTimeout(
-          () => reject(new Error("Timeout")),
-          SESSION_CHECK_TIMEOUT_MS,
-        )
-      })
-
       try {
+        console.log("Auth: Starting initial session check...")
         const {
           data: { session },
           error,
-        } = await Promise.race([checkPromise, timeoutPromise])
+        } = await (async () => {
+          const SESSION_CHECK_TIMEOUT_MS =
+            Number(process.env.NEXT_PUBLIC_SESSION_CHECK_TIMEOUT_MS) || 3000
+          let timeoutId: NodeJS.Timeout | undefined
+          try {
+            const checkPromise = supabase.auth.getSession()
+            const timeoutPromise = new Promise((_, reject) => {
+              timeoutId = setTimeout(() => reject(new Error("Timeout")), SESSION_CHECK_TIMEOUT_MS)
+            })
+            return await Promise.race([checkPromise, timeoutPromise])
+          } finally {
+            clearTimeout(timeoutId)
+          }
+        })()
 
         if (error) {
           console.error("Auth: Error during initial session check.", error)
@@ -75,13 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           safeSetUser(null)
         }
       } catch (error) {
-        if (error.message === "Timeout") {
-          console.warn(
-            `Auth: Initial session check timed out after ${SESSION_CHECK_TIMEOUT_MS}ms. Assuming no session.`,
-          )
-        } else {
-          console.error("Auth: Unexpected error during initial session check.", error)
-        }
+        console.error("Auth: Unexpected error during initial session check.", error)
         safeSetUser(null)
       } finally {
         console.log("Auth: Initial session check complete. Setting loading to false.")
@@ -111,7 +107,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // --- 3. Cleanup ---
     return () => {
       isMounted = false
-      clearTimeout(sessionTimeoutId)
       subscription.unsubscribe()
     }
   }, []) // Empty dependency array ensures this runs only once on mount
@@ -153,65 +148,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     setLoading(true)
     console.log("SignIn: Attempting to sign in...")
+    let signInTimeoutId: NodeJS.Timeout | undefined
+    let getUserTimeoutId: NodeJS.Timeout | undefined
+
     try {
-      const signInPromise = supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      })
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("SignIn Timeout")), 5000),
-      )
-      const { data, error } = await Promise.race([signInPromise, timeoutPromise])
+      // --- Step 1: Authenticate with Supabase ---
+      const { data, error } = await (async () => {
+        const SIGNIN_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_SIGNIN_TIMEOUT_MS) || 5000
+        try {
+          const signInPromise = supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          })
+          const signInTimeoutPromise = new Promise((_, reject) => {
+            signInTimeoutId = setTimeout(() => reject(new Error("SignIn Timeout")), SIGNIN_TIMEOUT_MS)
+          })
+          return await Promise.race([signInPromise, signInTimeoutPromise])
+        } finally {
+          clearTimeout(signInTimeoutId)
+        }
+      })()
 
-      console.log("SignIn: Received response from Supabase.", {
-        hasData: !!data,
-        hasSession: !!data?.session,
-        hasUser: !!data?.user,
-        hasError: !!error,
-      })
-
-      if (error || !data.session || !data.user) {
+      console.log("SignIn: Received response from Supabase.", { hasData: !!data, hasError: !!error })
+      if (error || !data?.session || !data?.user) {
         console.error("SignIn: Supabase auth error or missing session/user.", error)
-        setLoading(false) // Stop loading on failure
         throw new Error(getAuthErrorMessage(error || new Error("Missing session data.")))
       }
 
-      // --- Non-blocking flow starts here ---
-      const { user, session } = data
-      console.log("SignIn: Auth successful. Session received for user:", user.email)
-
-      // 1. Determine navigation path with a fast, blocking call + timeout
+      // --- Step 2: Determine Navigation Path ---
+      const { user } = data
+      console.log("SignIn: Auth successful for user:", user.email)
       try {
-        const getUserPromise = DatabaseService.getUser(user.id)
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+        const userData = await (async () => {
+          const GET_USER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_GET_USER_TIMEOUT_MS) || 2000
+          try {
+            const getUserPromise = DatabaseService.getUser(user.id)
+            const getUserTimeoutPromise = new Promise((_, reject) => {
+              getUserTimeoutId = setTimeout(() => reject(new Error("GetUser Timeout")), GET_USER_TIMEOUT_MS)
+            })
+            return await Promise.race([getUserPromise, getUserTimeoutPromise])
+          } finally {
+            clearTimeout(getUserTimeoutId)
+          }
+        })()
 
-        console.log("SignIn: Checking onboarding status for navigation...")
-        const userData = await Promise.race([getUserPromise, timeoutPromise])
-
-        if (!userData.onboarding_complete) {
-          console.log("SignIn: User has not completed onboarding. Redirecting to /onboarding/age.")
+        if (userData && !userData.onboarding_complete) {
           router.push("/onboarding/age")
         } else {
-          console.log("SignIn: User has completed onboarding. Redirecting to /home.")
           router.push("/home")
         }
       } catch (e) {
         console.error("SignIn: Failed to get user for onboarding check (or timed out). Defaulting to onboarding.", e)
-        router.push("/onboarding/age") // Default to onboarding on failure or timeout
+        router.push("/onboarding/age")
       }
 
-      // 2. Stop the loading spinner immediately after navigation is triggered
+      // --- Step 3: Finalize UI and Background Sync ---
       setLoading(false)
       console.log("SignIn: Navigation triggered, loading spinner stopped.")
-
-      // 3. Sync full user profile in the background (fire-and-forget)
-      console.log("SignIn: Starting background user data sync.")
       loadUserData(user.id, user.email!).catch((err) => {
         console.error("SignIn: Background loadUserData failed.", err)
       })
     } catch (error) {
       console.error("SignIn: An unexpected error occurred during the sign-in process.", error)
-      // Ensure loading is off even if an error is thrown
       if (loading) setLoading(false)
       throw error
     }
