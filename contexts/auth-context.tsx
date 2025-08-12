@@ -98,16 +98,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router, user])
 
-  // New useEffect for handling navigation after user state is updated
-  useEffect(() => {
-    if (!loading && user) {
-      if (!user.onboardingComplete) {
-        router.push("/onboarding/age")
-      } else {
-        router.push("/home")
-      }
-    }
-  }, [user, loading, router])
+  // This useEffect is removed to prevent the redirection loop during onboarding.
+  // Navigation is now handled by the individual onboarding components.
 
   const loadUserData = async (authUser: any) => {
     try {

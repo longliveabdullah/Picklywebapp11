@@ -35,13 +35,16 @@ export default function OnboardingGenderPage() {
       return
     }
 
-    router.push("/onboarding/height")
-
-    void updateUser({
-      profile: {
-        gender,
-      },
-    })
+    try {
+      await updateUserProfile({ gender })
+      router.push("/onboarding/height")
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Could not save your gender. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (

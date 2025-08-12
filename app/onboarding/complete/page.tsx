@@ -5,12 +5,25 @@ import { motion } from "framer-motion"
 import { Sparkles, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Confetti } from "@/components/confetti"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingCompletePage() {
   const router = useRouter()
+  const { updateUser } = useAuth()
+  const { toast } = useToast()
 
-  const handleStart = () => {
-    router.push("/home")
+  const handleStart = async () => {
+    try {
+      await updateUser({ onboardingComplete: true })
+      router.push("/home")
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Could not complete your onboarding. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (

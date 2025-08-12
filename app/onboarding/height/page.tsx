@@ -29,13 +29,16 @@ export default function OnboardingHeightPage() {
       return
     }
 
-    router.push("/onboarding/weight")
-
-    void updateUser({
-      profile: {
-        height,
-      },
-    })
+    try {
+      await updateUserProfile({ height })
+      router.push("/onboarding/weight")
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Could not save your height. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const getHeightCategory = (height: number) => {

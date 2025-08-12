@@ -29,16 +29,16 @@ export default function OnboardingWeightPage() {
       return
     }
 
-    router.push("/onboarding/complete")
-
-    // Fire-and-forget. `updateUser` handles the optimistic update
-    // of both weight and the onboardingComplete flag.
-    void updateUser({
-      onboardingComplete: true,
-      profile: {
-        weight,
-      },
-    })
+    try {
+      await updateUserProfile({ weight })
+      router.push("/onboarding/complete")
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Could not save your weight. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (

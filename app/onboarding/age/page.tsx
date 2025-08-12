@@ -29,17 +29,16 @@ export default function OnboardingAgePage() {
       return
     }
 
-    // Navigate immediately. The updateUser function now handles the optimistic update.
-    router.push("/onboarding/gender")
-
-    // Fire-and-forget the update.
-    // The updateUser function will optimistically update the state and
-    // revert it if the database call fails.
-    void updateUser({
-      profile: {
-        age,
-      },
-    })
+    try {
+      await updateUserProfile({ age })
+      router.push("/onboarding/gender")
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Could not save your age. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
