@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
 import { logger } from "@/lib/utils"
@@ -46,6 +46,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(getInitialUser)
   const [loading, setLoading] = useState(!user) // If user is cached, loading is initially false
   const router = useRouter()
+  const pathname = usePathname()
+
+  // This useEffect handles navigation after a user signs in or signs up.
+  useEffect(() => {
+    if (!loading && user) {
+      const isOnAuthPage = pathname === "/" || pathname === "/signup"
+      if (isOnAuthPage) {
+        if (!user.onboardingComplete) {
+          router.push("/onboarding/age")
+        } else {
+          router.push("/home")
+        }
+      }
+    }
+  }, [user, loading, router, pathname])
 
   useEffect(() => {
     const {
