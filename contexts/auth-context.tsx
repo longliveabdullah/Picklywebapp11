@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
 import { logger } from "@/lib/utils"
@@ -18,7 +18,6 @@ type AuthContextType = {
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
   updateUser: (updates: Partial<User>) => Promise<void>
-  updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>
   addScanToHistory: (scan: Omit<ScanHistoryItem, "id" | "scannedAt">) => Promise<void>
   getScanHistory: () => Promise<ScanHistoryItem[]>
   deleteScanFromHistory: (scanId: string) => Promise<void>
@@ -26,353 +25,213 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const CACHED_USER_KEY = "pickly-cached-user"
+
+function getInitialUser(): User | null {
+  if (typeof window === "undefined") return null
+  try {
+    const cachedUser = localStorage.getItem(CACHED_USER_KEY)
+    if (cachedUser) {
+      logger.log("Auth: Found cached user in localStorage.")
+      return JSON.parse(cachedUser)
+    }
+  } catch (error) {
+    logger.error("Auth: Could not parse cached user.", error)
+  }
+  return null
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(getInitialUser)
+  const [loading, setLoading] = useState(!user) // If user is cached, loading is initially false
   const router = useRouter()
-  const loadingUserIdRef = useRef<string | null>(null)
+  const pathname = usePathname()
 
+  // This useEffect handles navigation after a user signs in or signs up.
   useEffect(() => {
-    let isMounted = true
-
-    // Create safe state setters that check if the component is still mounted
-    const safeSetUser = (user: User | null) => {
-      if (isMounted) setUser(user)
-    }
-    const safeSetLoading = (loading: boolean) => {
-      if (isMounted) setLoading(loading)
-    }
-
-    // --- 1. Initial Session Check with Timeout ---
-    const initializeAuth = async () => {
-      try {
-        logger.log("Auth: Starting initial session check...")
-        const {
-          data: { session },
-          error,
-        } = await (async () => {
-          const SESSION_CHECK_TIMEOUT_MS =
-            Number(process.env.NEXT_PUBLIC_SESSION_CHECK_TIMEOUT_MS) || 3000
-          let timeoutId: ReturnType<typeof setTimeout> | undefined
-          try {
-            const checkPromise = supabase.auth.getSession()
-            const timeoutPromise = new Promise((_, reject) => {
-              timeoutId = setTimeout(() => reject(new Error("Timeout")), SESSION_CHECK_TIMEOUT_MS)
-            })
-            return await Promise.race([checkPromise, timeoutPromise])
-          } finally {
-            clearTimeout(timeoutId)
-          }
-        })()
-
-        if (error) {
-          logger.error("Auth: Error during initial session check.", error)
-          safeSetUser(null)
-          return
-        }
-
-        if (session?.user) {
-          logger.log("Auth: Initial session found for user:", session.user.email)
-          await loadUserData(session.user.id, session.user.email!, safeSetUser)
-        } else {
-          logger.log("Auth: No initial session found.")
-          safeSetUser(null)
-        }
-      } catch (error) {
-        logger.error("Auth: Unexpected error during initial session check.", error)
-        safeSetUser(null)
-      } finally {
-        logger.log("Auth: Initial session check complete. Setting loading to false.")
-        safeSetLoading(false)
-      }
-    }
-
-    initializeAuth()
-
-    // --- 2. Real-time Subscription for Auth State Changes ---
-    let subscription: any
-    try {
-      const { data, error } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (!isMounted) return
-        if (event === "INITIAL_SESSION") return
-
-        logger.log("Auth: onAuthStateChange event received:", event)
-        if (session?.user) {
-          logger.log("Auth: Session updated for user:", session.user.email)
-          await loadUserData(session.user.id, session.user.email!, safeSetUser)
-        } else if (event === "SIGNED_OUT") {
-          logger.log("Auth: User signed out.")
-          safeSetUser(null)
-        }
-      })
-      if (error) throw error
-      subscription = data?.subscription
-    } catch (error) {
-      logger.error("Auth: Failed to subscribe to onAuthStateChange.", error)
-    }
-
-    // --- 3. Cleanup ---
-    return () => {
-      isMounted = false
-      subscription?.unsubscribe?.()
-    }
-  }, []) // Empty dependency array ensures this runs only once on mount
-
-  const loadUserData = async (
-    userId: string,
-    email: string,
-    setter: (user: User | null) => void = setUser,
-  ) => {
-    if (loadingUserIdRef.current === userId) {
-      logger.log(`Auth: loadUserData for ${userId} is already in progress. Skipping.`)
-      return
-    }
-    loadingUserIdRef.current = userId
-
-    try {
-      const [userResult, profileData] = await Promise.all([
-        DatabaseService.getUser(userId).catch(() => null),
-        DatabaseService.getUserProfile(userId),
-      ])
-
-      let userData = userResult
-      if (!userData) {
-        logger.log("Creating new user in database:", email)
-        userData = await DatabaseService.createUser(email, userId)
-      }
-
-      setter({
-        id: userData.id,
-        email: userData.email,
-        onboardingComplete: userData.onboarding_complete,
-        profile: profileData || {},
-      })
-    } catch (error) {
-      logger.error("Error loading user data:", error)
-      setter({
-        id: userId,
-        email: email,
-        onboardingComplete: false,
-        profile: {},
-      })
-    } finally {
-      loadingUserIdRef.current = null
-    }
-  }
-
-  const verifySessionPersistence = async (userId: string) => {
-    const MAX_RETRIES = Number(process.env.NEXT_PUBLIC_PERSISTENCE_MAX_RETRIES) || 3
-    const INITIAL_DELAY_MS = Number(process.env.NEXT_PUBLIC_PERSISTENCE_INITIAL_DELAY_MS) || 100
-
-    for (let i = 0; i < MAX_RETRIES; i++) {
-      const { data } = await supabase.auth.getSession()
-      if (data.session?.user?.id === userId) {
-        logger.log(`SignIn: Session persistence verified after ${i + 1} attempt(s).`)
-        return
-      }
-      const delay = INITIAL_DELAY_MS * Math.pow(2, i)
-      logger.log(`SignIn: Session not yet persisted. Retrying in ${delay}ms...`)
-      await new Promise((resolve) => setTimeout(resolve, delay))
-    }
-    throw new Error("Session could not be verified after sign-in.")
-  }
-
-  const signIn = async (email: string, password: string) => {
-    setLoading(true)
-    logger.log("SignIn: Attempting to sign in...")
-    let signInTimeoutId: ReturnType<typeof setTimeout> | undefined
-    let getUserTimeoutId: ReturnType<typeof setTimeout> | undefined
-
-    try {
-      // --- Step 1: Authenticate with Supabase ---
-      const { data, error } = await (async () => {
-        const SIGNIN_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_SIGNIN_TIMEOUT_MS) || 5000
-        try {
-          const signInPromise = supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password,
-          })
-          const signInTimeoutPromise = new Promise((_, reject) => {
-            signInTimeoutId = setTimeout(() => reject(new Error("SignIn Timeout")), SIGNIN_TIMEOUT_MS)
-          })
-          return await Promise.race([signInPromise, signInTimeoutPromise])
-        } finally {
-          clearTimeout(signInTimeoutId)
-        }
-      })()
-
-      logger.log("SignIn: Received response from Supabase.", { hasData: !!data, hasError: !!error })
-      if (error || !data?.session || !data?.user) {
-        logger.error("SignIn: Supabase auth error or missing session/user.", error)
-        throw new Error(getAuthErrorMessage(error || new Error("Missing session data.")))
-      }
-
-      const { user } = data
-
-      // --- Step 2: Verify session persistence ---
-      await verifySessionPersistence(user.id)
-
-      // --- Step 3: Determine Navigation Path ---
-      logger.log("SignIn: Auth successful for user:", user.email)
-      try {
-        const statusData = await (async () => {
-          const GET_USER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_GET_USER_TIMEOUT_MS) || 2000
-          try {
-            logger.log("SignIn: Checking onboarding status for navigation...")
-            const getStatusPromise = DatabaseService.checkOnboardingStatus(user.id)
-            const getUserTimeoutPromise = new Promise((_, reject) => {
-              getUserTimeoutId = setTimeout(() => reject(new Error("GetUser Timeout")), GET_USER_TIMEOUT_MS)
-            })
-            return await Promise.race([getStatusPromise, getUserTimeoutPromise])
-          } finally {
-            clearTimeout(getUserTimeoutId)
-          }
-        })()
-
-        if (statusData && !statusData.onboarding_complete) {
+    if (!loading && user) {
+      const isOnAuthPage = pathname === "/" || pathname === "/signup"
+      if (isOnAuthPage) {
+        if (!user.onboardingComplete) {
           router.push("/onboarding/age")
         } else {
           router.push("/home")
         }
-      } catch (e) {
-        logger.error("SignIn: Failed to get user for onboarding check (or timed out). Defaulting to onboarding.", e)
-        router.push("/onboarding/age")
+      }
+    }
+  }, [user, loading, router, pathname])
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      logger.log(`Auth: onAuthStateChange event: ${event}`)
+
+      const handleUserSession = async (sessionUser: any) => {
+        // Only load user data if it's different from the cached version
+        if (sessionUser.id !== user?.id) {
+          await loadUserData(sessionUser)
+        }
       }
 
-      // --- Step 3: Finalize UI and Background Sync ---
-      setLoading(false)
-      logger.log("SignIn: Navigation triggered, loading spinner stopped.")
-      loadUserData(user.id, user.email!).catch((err) => {
-        logger.error("SignIn: Background loadUserData failed.", err)
-      })
-    } catch (error) {
-      logger.error("SignIn: An unexpected error occurred during the sign-in process.", error)
-      if (loading) setLoading(false)
-      throw error
+      switch (event) {
+        case "INITIAL_SESSION":
+          if (session) {
+            await handleUserSession(session.user)
+          } else {
+            // No session, clear cache and state
+            localStorage.removeItem(CACHED_USER_KEY)
+            setUser(null)
+          }
+          setLoading(false)
+          break
+        case "SIGNED_IN":
+          if (session) {
+            await handleUserSession(session.user)
+          }
+          break
+        case "SIGNED_OUT":
+          localStorage.removeItem(CACHED_USER_KEY)
+          setUser(null)
+          router.push("/")
+          break
+        case "USER_UPDATED":
+          if (session) {
+            await handleUserSession(session.user)
+          }
+          break
+        case "TOKEN_REFRESHED":
+          // The session has been refreshed, but user data likely hasn't changed.
+          // We could re-fetch here if we suspect backend changes.
+          break
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
     }
+  }, [router, user])
+
+  // This useEffect is removed to prevent the redirection loop during onboarding.
+  // Navigation is now handled by the individual onboarding components.
+
+  const loadUserData = async (authUser: any) => {
+    try {
+      // Check if user exists in our public.users table
+      const userRecord = await DatabaseService.getUser(authUser.id).catch((err) => {
+        // If user not found, error code is PGRST116. In that case, return null.
+        if (err.code === "PGRST116") return null
+        throw err
+      })
+
+      let finalUserRecord = userRecord
+      // If user doesn't exist, create them
+      if (!finalUserRecord) {
+        logger.log("Auth: Creating new user in database:", authUser.email)
+        finalUserRecord = await DatabaseService.createUser(authUser.email, authUser.id)
+      }
+
+      // Fetch user profile
+      const profileData = await DatabaseService.getUserProfile(authUser.id)
+
+      const newUser = {
+        id: finalUserRecord.id,
+        email: finalUserRecord.email,
+        onboardingComplete: finalUserRecord.onboarding_complete,
+        profile: profileData || {},
+      }
+
+      localStorage.setItem(CACHED_USER_KEY, JSON.stringify(newUser))
+      setUser(newUser)
+    } catch (error) {
+      logger.error("Auth: Error loading user data:", error)
+      // Sign out the user if their data can't be loaded
+      localStorage.removeItem(CACHED_USER_KEY)
+      await supabase.auth.signOut()
+      setUser(null)
+    }
+  }
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    })
+    if (error) throw new Error(getAuthErrorMessage(error))
   }
 
   const signUp = async (email: string, password: string) => {
-    setLoading(true)
-    try {
-      // Sign up without email confirmation
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          emailRedirectTo: undefined, // Disable email confirmation
-        },
-      })
-
-      if (error) {
-        logger.error("Sign up error:", error)
-        throw new Error(getAuthErrorMessage(error))
-      }
-
-      if (data.user) {
-        // Create user record in database
-        try {
-          await DatabaseService.createUser(email.trim(), data.user.id)
-        } catch (dbError) {
-          logger.error("Sign up: creating user in DB failed, but might already exist.", dbError)
-        }
-
-        // Check if user is immediately signed in (no email confirmation required)
-        if (data.session) {
-          await loadUserData(data.user.id, data.user.email!)
-          router.push("/onboarding/age")
-        } else {
-          // If no session, try to sign in immediately
-          try {
-            await signIn(email.trim(), password)
-          } catch (signInError) {
-            throw new Error("Account created successfully! Please sign in with your credentials.")
-          }
-        }
-      }
-    } catch (error) {
-      logger.error("Sign up error:", error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      // Email confirmation is disabled in Supabase settings for this project
+    })
+    if (error) throw new Error(getAuthErrorMessage(error))
   }
 
   const signInWithGoogle = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) {
-        logger.error("Google sign in error:", error)
-        throw new Error(getAuthErrorMessage(error))
-      }
-    } catch (error) {
-      logger.error("Google sign in error:", error)
-      setLoading(false)
-      throw error
-    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) throw new Error(getAuthErrorMessage(error))
   }
 
   const signOut = async () => {
-    setLoading(true)
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-
-      setUser(null)
-      router.push("/")
-    } catch (error) {
+    localStorage.removeItem(CACHED_USER_KEY)
+    const { error } = await supabase.auth.signOut()
+    if (error) {
       logger.error("Sign out error:", error)
       throw error
-    } finally {
-      setLoading(false)
     }
   }
 
   const updateUser = async (updates: Partial<User>) => {
     if (!user) return
 
-    const previousUser = user
-    setUser({ ...user, ...updates })
+    const previousUser = { ...user }
+    const newUser = {
+      ...user,
+      ...updates,
+      profile: {
+        ...user.profile,
+        ...updates.profile,
+      },
+    }
+
+    // Optimistically update state and localStorage
+    setUser(newUser)
+    localStorage.setItem(CACHED_USER_KEY, JSON.stringify(newUser))
 
     try {
-      const updatePromises: Promise<unknown>[] = []
-
+      // Send updates to the database
+      const promises = []
       if (updates.onboardingComplete !== undefined) {
-        updatePromises.push(
+        promises.push(
           DatabaseService.updateUser(user.id, {
             onboarding_complete: updates.onboardingComplete,
           }),
         )
       }
-
       if (updates.profile) {
-        updatePromises.push(updateUserProfile(updates.profile))
+        promises.push(DatabaseService.updateUserProfile(user.id, updates.profile))
       }
-
-      await Promise.all(updatePromises)
+      await Promise.all(promises)
     } catch (error) {
-      // If the update fails, revert the user state and show a toast
+      // If DB update fails, revert state and localStorage and show error
       logger.error("Update user failed, reverting optimistic update:", error)
       setUser(previousUser)
+      localStorage.setItem(CACHED_USER_KEY, JSON.stringify(previousUser))
       toast({
         title: "Update Failed",
         description: "Your changes could not be saved. Please try again.",
         variant: "destructive",
       })
+      // Re-throw the error so the calling component knows it failed
+      throw error
     }
-  }
-
-  const updateUserProfile = async (profile: Partial<UserProfile>) => {
-    if (!user) return
-    // Errors will be caught by the calling function, `updateUser`.
-    await DatabaseService.updateUserProfile(user.id, profile)
   }
 
   const addScanToHistory = async (scan: Omit<ScanHistoryItem, "id" | "scannedAt">) => {
@@ -451,7 +310,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithGoogle,
         signOut,
         updateUser,
-        updateUserProfile,
         addScanToHistory,
         getScanHistory,
         deleteScanFromHistory,

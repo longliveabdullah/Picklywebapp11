@@ -23,7 +23,7 @@ export default function OnboardingGenderPage() {
   const { toast } = useToast()
   const [gender, setGender] = useState<UserProfile["gender"]>(user?.profile.gender)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!gender) {
@@ -35,13 +35,12 @@ export default function OnboardingGenderPage() {
       return
     }
 
-    router.push("/onboarding/height")
-
-    void updateUser({
-      profile: {
-        gender,
-      },
-    })
+    try {
+      await updateUser({ profile: { gender } })
+      router.push("/onboarding/height")
+    } catch (error) {
+      // Error toast is already handled in the updateUser function
+    }
   }
 
   return (

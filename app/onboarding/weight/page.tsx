@@ -17,7 +17,7 @@ export default function OnboardingWeightPage() {
   const { toast } = useToast()
   const [weight, setWeight] = useState<number | undefined>(user?.profile.weight)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!weight || weight < 20 || weight > 300) {
@@ -29,16 +29,12 @@ export default function OnboardingWeightPage() {
       return
     }
 
-    router.push("/onboarding/complete")
-
-    // Fire-and-forget. `updateUser` handles the optimistic update
-    // of both weight and the onboardingComplete flag.
-    void updateUser({
-      onboardingComplete: true,
-      profile: {
-        weight,
-      },
-    })
+    try {
+      await updateUser({ profile: { weight } })
+      router.push("/onboarding/complete")
+    } catch (error) {
+      // Error toast is already handled in the updateUser function
+    }
   }
 
   return (

@@ -17,7 +17,7 @@ export default function OnboardingHeightPage() {
   const { toast } = useToast()
   const [height, setHeight] = useState<number | undefined>(user?.profile.height)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!height || height < 50 || height > 250) {
@@ -29,13 +29,12 @@ export default function OnboardingHeightPage() {
       return
     }
 
-    router.push("/onboarding/weight")
-
-    void updateUser({
-      profile: {
-        height,
-      },
-    })
+    try {
+      await updateUser({ profile: { height } })
+      router.push("/onboarding/weight")
+    } catch (error) {
+      // Error toast is already handled in the updateUser function
+    }
   }
 
   const getHeightCategory = (height: number) => {
