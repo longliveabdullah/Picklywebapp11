@@ -12,12 +12,12 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingAgePage() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUserProfile } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [age, setAge] = useState<number | undefined>(user?.profile.age)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!age || age < 13 || age > 120) {

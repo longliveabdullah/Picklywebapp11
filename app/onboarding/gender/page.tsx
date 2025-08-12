@@ -18,12 +18,12 @@ const genderOptions: { value: UserProfile["gender"]; label: string; icon: string
 ]
 
 export default function OnboardingGenderPage() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUserProfile } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [gender, setGender] = useState<UserProfile["gender"]>(user?.profile.gender)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!gender) {

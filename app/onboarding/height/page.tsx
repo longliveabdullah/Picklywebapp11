@@ -12,12 +12,12 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingHeightPage() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUserProfile } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [height, setHeight] = useState<number | undefined>(user?.profile.height)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!height || height < 50 || height > 250) {
