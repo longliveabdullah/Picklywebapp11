@@ -18,7 +18,6 @@ type AuthContextType = {
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
   updateUser: (updates: Partial<User>) => Promise<void>
-  updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>
   addScanToHistory: (scan: Omit<ScanHistoryItem, "id" | "scannedAt">) => Promise<void>
   getScanHistory: () => Promise<ScanHistoryItem[]>
   deleteScanFromHistory: (scanId: string) => Promise<void>
@@ -192,41 +191,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = async (updates: Partial<User>) => {
     if (!user) return
 
-    const previousUser = user
-    setUser({ ...user, ...updates })
+    const previousUser = { ...user }
+    const newUser = {
+      ...user,
+      ...updates,
+      profile: {
+        ...user.profile,
+        ...updates.profile,
+      },
+    }
+
+    // Optimistically update state and localStorage
+    setUser(newUser)
+    localStorage.setItem(CACHED_USER_KEY, JSON.stringify(newUser))
 
     try {
-      const updatePromises: Promise<unknown>[] = []
-
+      // Send updates to the database
+      const promises = []
       if (updates.onboardingComplete !== undefined) {
-        updatePromises.push(
+        promises.push(
           DatabaseService.updateUser(user.id, {
             onboarding_complete: updates.onboardingComplete,
           }),
         )
       }
-
       if (updates.profile) {
-        updatePromises.push(updateUserProfile(updates.profile))
+        promises.push(DatabaseService.updateUserProfile(user.id, updates.profile))
       }
-
-      await Promise.all(updatePromises)
+      await Promise.all(promises)
     } catch (error) {
-      // If the update fails, revert the user state and show a toast
+      // If DB update fails, revert state and localStorage and show error
       logger.error("Update user failed, reverting optimistic update:", error)
       setUser(previousUser)
+      localStorage.setItem(CACHED_USER_KEY, JSON.stringify(previousUser))
       toast({
         title: "Update Failed",
         description: "Your changes could not be saved. Please try again.",
         variant: "destructive",
       })
+      // Re-throw the error so the calling component knows it failed
+      throw error
     }
-  }
-
-  const updateUserProfile = async (profile: Partial<UserProfile>) => {
-    if (!user) return
-    // Errors will be caught by the calling function, `updateUser`.
-    await DatabaseService.updateUserProfile(user.id, profile)
   }
 
   const addScanToHistory = async (scan: Omit<ScanHistoryItem, "id" | "scannedAt">) => {
@@ -305,7 +310,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithGoogle,
         signOut,
         updateUser,
-        updateUserProfile,
         addScanToHistory,
         getScanHistory,
         deleteScanFromHistory,

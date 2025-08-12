@@ -18,7 +18,7 @@ const genderOptions: { value: UserProfile["gender"]; label: string; icon: string
 ]
 
 export default function OnboardingGenderPage() {
-  const { user, updateUserProfile } = useAuth()
+  const { user, updateUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [gender, setGender] = useState<UserProfile["gender"]>(user?.profile.gender)
@@ -36,14 +36,10 @@ export default function OnboardingGenderPage() {
     }
 
     try {
-      await updateUserProfile({ gender })
+      await updateUser({ profile: { gender } })
       router.push("/onboarding/height")
     } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Could not save your gender. Please try again.",
-        variant: "destructive",
-      })
+      // Error toast is already handled in the updateUser function
     }
   }
 

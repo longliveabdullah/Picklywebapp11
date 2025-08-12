@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingAgePage() {
-  const { user, updateUserProfile } = useAuth()
+  const { user, updateUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [age, setAge] = useState<number | undefined>(user?.profile.age)
@@ -30,14 +30,10 @@ export default function OnboardingAgePage() {
     }
 
     try {
-      await updateUserProfile({ age })
+      await updateUser({ profile: { age } })
       router.push("/onboarding/gender")
     } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Could not save your age. Please try again.",
-        variant: "destructive",
-      })
+      // Error toast is already handled in the updateUser function
     }
   }
 

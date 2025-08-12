@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingWeightPage() {
-  const { user, updateUserProfile } = useAuth()
+  const { user, updateUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [weight, setWeight] = useState<number | undefined>(user?.profile.weight)
@@ -30,14 +30,10 @@ export default function OnboardingWeightPage() {
     }
 
     try {
-      await updateUserProfile({ weight })
+      await updateUser({ profile: { weight } })
       router.push("/onboarding/complete")
     } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Could not save your weight. Please try again.",
-        variant: "destructive",
-      })
+      // Error toast is already handled in the updateUser function
     }
   }
 

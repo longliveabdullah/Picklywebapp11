@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OnboardingHeightPage() {
-  const { user, updateUserProfile } = useAuth()
+  const { user, updateUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [height, setHeight] = useState<number | undefined>(user?.profile.height)
@@ -30,14 +30,10 @@ export default function OnboardingHeightPage() {
     }
 
     try {
-      await updateUserProfile({ height })
+      await updateUser({ profile: { height } })
       router.push("/onboarding/weight")
     } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Could not save your height. Please try again.",
-        variant: "destructive",
-      })
+      // Error toast is already handled in the updateUser function
     }
   }
 
