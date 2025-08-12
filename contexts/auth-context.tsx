@@ -26,9 +26,25 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const CACHED_USER_KEY = "pickly-cached-user"
+
+function getInitialUser(): User | null {
+  if (typeof window === "undefined") return null
+  try {
+    const cachedUser = localStorage.getItem(CACHED_USER_KEY)
+    if (cachedUser) {
+      logger.log("Auth: Found cached user in localStorage.")
+      return JSON.parse(cachedUser)
+    }
+  } catch (error) {
+    logger.error("Auth: Could not parse cached user.", error)
+  }
+  return null
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(getInitialUser)
+  const [loading, setLoading] = useState(!user) // If user is cached, loading is initially false
   const router = useRouter()
 
   useEffect(() => {
@@ -37,26 +53,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       logger.log(`Auth: onAuthStateChange event: ${event}`)
 
-      if (event === "INITIAL_SESSION") {
-        if (session) {
-          await loadUserData(session.user)
+      const handleUserSession = async (sessionUser: any) => {
+        // Only load user data if it's different from the cached version
+        if (sessionUser.id !== user?.id) {
+          await loadUserData(sessionUser)
         }
-        setLoading(false)
-      } else if (event === "SIGNED_IN") {
-        if (session) {
-          await loadUserData(session.user)
-          // Navigation is handled in the new useEffect hook
-        }
-      } else if (event === "SIGNED_OUT") {
-        setUser(null)
-        router.push("/")
+      }
+
+      switch (event) {
+        case "INITIAL_SESSION":
+          if (session) {
+            await handleUserSession(session.user)
+          } else {
+            // No session, clear cache and state
+            localStorage.removeItem(CACHED_USER_KEY)
+            setUser(null)
+          }
+          setLoading(false)
+          break
+        case "SIGNED_IN":
+          if (session) {
+            await handleUserSession(session.user)
+          }
+          break
+        case "SIGNED_OUT":
+          localStorage.removeItem(CACHED_USER_KEY)
+          setUser(null)
+          router.push("/")
+          break
+        case "USER_UPDATED":
+          if (session) {
+            await handleUserSession(session.user)
+          }
+          break
+        case "TOKEN_REFRESHED":
+          // The session has been refreshed, but user data likely hasn't changed.
+          // We could re-fetch here if we suspect backend changes.
+          break
       }
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [router])
+  }, [router, user])
 
   // New useEffect for handling navigation after user state is updated
   useEffect(() => {
@@ -88,15 +128,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Fetch user profile
       const profileData = await DatabaseService.getUserProfile(authUser.id)
 
-      setUser({
+      const newUser = {
         id: finalUserRecord.id,
         email: finalUserRecord.email,
         onboardingComplete: finalUserRecord.onboarding_complete,
         profile: profileData || {},
-      })
+      }
+
+      localStorage.setItem(CACHED_USER_KEY, JSON.stringify(newUser))
+      setUser(newUser)
     } catch (error) {
       logger.error("Auth: Error loading user data:", error)
       // Sign out the user if their data can't be loaded
+      localStorage.removeItem(CACHED_USER_KEY)
       await supabase.auth.signOut()
       setUser(null)
     }
@@ -130,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    localStorage.removeItem(CACHED_USER_KEY)
     const { error } = await supabase.auth.signOut()
     if (error) {
       logger.error("Sign out error:", error)
