@@ -30,308 +30,110 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const loadingUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    let isMounted = true
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      logger.log(`Auth: onAuthStateChange event: ${event}`)
 
-    // Create safe state setters that check if the component is still mounted
-    const safeSetUser = (user: User | null) => {
-      if (isMounted) setUser(user)
-    }
-    const safeSetLoading = (loading: boolean) => {
-      if (isMounted) setLoading(loading)
-    }
-
-    // --- 1. Initial Session Check with Timeout ---
-    const initializeAuth = async () => {
-      try {
-        logger.log("Auth: Starting initial session check...")
-        const {
-          data: { session },
-          error,
-        } = await (async () => {
-          const SESSION_CHECK_TIMEOUT_MS =
-            Number(process.env.NEXT_PUBLIC_SESSION_CHECK_TIMEOUT_MS) || 3000
-          let timeoutId: ReturnType<typeof setTimeout> | undefined
-          try {
-            const checkPromise = supabase.auth.getSession()
-            const timeoutPromise = new Promise((_, reject) => {
-              timeoutId = setTimeout(() => reject(new Error("Timeout")), SESSION_CHECK_TIMEOUT_MS)
-            })
-            return await Promise.race([checkPromise, timeoutPromise])
-          } finally {
-            clearTimeout(timeoutId)
-          }
-        })()
-
-        if (error) {
-          logger.error("Auth: Error during initial session check.", error)
-          safeSetUser(null)
-          return
+      if (event === "INITIAL_SESSION") {
+        if (session) {
+          await loadUserData(session.user)
         }
-
-        if (session?.user) {
-          logger.log("Auth: Initial session found for user:", session.user.email)
-          await loadUserData(session.user.id, session.user.email!, safeSetUser)
-        } else {
-          logger.log("Auth: No initial session found.")
-          safeSetUser(null)
+        setLoading(false)
+      } else if (event === "SIGNED_IN") {
+        if (session) {
+          await loadUserData(session.user)
+          // Navigation is handled in the new useEffect hook
         }
-      } catch (error) {
-        logger.error("Auth: Unexpected error during initial session check.", error)
-        safeSetUser(null)
-      } finally {
-        logger.log("Auth: Initial session check complete. Setting loading to false.")
-        safeSetLoading(false)
+      } else if (event === "SIGNED_OUT") {
+        setUser(null)
+        router.push("/")
       }
-    }
+    })
 
-    initializeAuth()
-
-    // --- 2. Real-time Subscription for Auth State Changes ---
-    let subscription: any
-    try {
-      const { data, error } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (!isMounted) return
-        if (event === "INITIAL_SESSION") return
-
-        logger.log("Auth: onAuthStateChange event received:", event)
-        if (session?.user) {
-          logger.log("Auth: Session updated for user:", session.user.email)
-          await loadUserData(session.user.id, session.user.email!, safeSetUser)
-        } else if (event === "SIGNED_OUT") {
-          logger.log("Auth: User signed out.")
-          safeSetUser(null)
-        }
-      })
-      if (error) throw error
-      subscription = data?.subscription
-    } catch (error) {
-      logger.error("Auth: Failed to subscribe to onAuthStateChange.", error)
-    }
-
-    // --- 3. Cleanup ---
     return () => {
-      isMounted = false
-      subscription?.unsubscribe?.()
+      subscription.unsubscribe()
     }
-  }, []) // Empty dependency array ensures this runs only once on mount
+  }, [router])
 
-  const loadUserData = async (
-    userId: string,
-    email: string,
-    setter: (user: User | null) => void = setUser,
-  ) => {
-    if (loadingUserIdRef.current === userId) {
-      logger.log(`Auth: loadUserData for ${userId} is already in progress. Skipping.`)
-      return
+  // New useEffect for handling navigation after user state is updated
+  useEffect(() => {
+    if (!loading && user) {
+      if (!user.onboardingComplete) {
+        router.push("/onboarding/age")
+      } else {
+        router.push("/home")
+      }
     }
-    loadingUserIdRef.current = userId
+  }, [user, loading, router])
 
+  const loadUserData = async (authUser: any) => {
     try {
-      const [userResult, profileData] = await Promise.all([
-        DatabaseService.getUser(userId).catch(() => null),
-        DatabaseService.getUserProfile(userId),
-      ])
+      // Check if user exists in our public.users table
+      const userRecord = await DatabaseService.getUser(authUser.id).catch((err) => {
+        // If user not found, error code is PGRST116. In that case, return null.
+        if (err.code === "PGRST116") return null
+        throw err
+      })
 
-      let userData = userResult
-      if (!userData) {
-        logger.log("Creating new user in database:", email)
-        userData = await DatabaseService.createUser(email, userId)
+      let finalUserRecord = userRecord
+      // If user doesn't exist, create them
+      if (!finalUserRecord) {
+        logger.log("Auth: Creating new user in database:", authUser.email)
+        finalUserRecord = await DatabaseService.createUser(authUser.email, authUser.id)
       }
 
-      setter({
-        id: userData.id,
-        email: userData.email,
-        onboardingComplete: userData.onboarding_complete,
+      // Fetch user profile
+      const profileData = await DatabaseService.getUserProfile(authUser.id)
+
+      setUser({
+        id: finalUserRecord.id,
+        email: finalUserRecord.email,
+        onboardingComplete: finalUserRecord.onboarding_complete,
         profile: profileData || {},
       })
     } catch (error) {
-      logger.error("Error loading user data:", error)
-      setter({
-        id: userId,
-        email: email,
-        onboardingComplete: false,
-        profile: {},
-      })
-    } finally {
-      loadingUserIdRef.current = null
+      logger.error("Auth: Error loading user data:", error)
+      // Sign out the user if their data can't be loaded
+      await supabase.auth.signOut()
+      setUser(null)
     }
-  }
-
-  const verifySessionPersistence = async (userId: string) => {
-    const MAX_RETRIES = Number(process.env.NEXT_PUBLIC_PERSISTENCE_MAX_RETRIES) || 3
-    const INITIAL_DELAY_MS = Number(process.env.NEXT_PUBLIC_PERSISTENCE_INITIAL_DELAY_MS) || 100
-
-    for (let i = 0; i < MAX_RETRIES; i++) {
-      const { data } = await supabase.auth.getSession()
-      if (data.session?.user?.id === userId) {
-        logger.log(`SignIn: Session persistence verified after ${i + 1} attempt(s).`)
-        return
-      }
-      const delay = INITIAL_DELAY_MS * Math.pow(2, i)
-      logger.log(`SignIn: Session not yet persisted. Retrying in ${delay}ms...`)
-      await new Promise((resolve) => setTimeout(resolve, delay))
-    }
-    throw new Error("Session could not be verified after sign-in.")
   }
 
   const signIn = async (email: string, password: string) => {
-    setLoading(true)
-    logger.log("SignIn: Attempting to sign in...")
-    let signInTimeoutId: ReturnType<typeof setTimeout> | undefined
-    let getUserTimeoutId: ReturnType<typeof setTimeout> | undefined
-
-    try {
-      // --- Step 1: Authenticate with Supabase ---
-      const { data, error } = await (async () => {
-        const SIGNIN_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_SIGNIN_TIMEOUT_MS) || 5000
-        try {
-          const signInPromise = supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password,
-          })
-          const signInTimeoutPromise = new Promise((_, reject) => {
-            signInTimeoutId = setTimeout(() => reject(new Error("SignIn Timeout")), SIGNIN_TIMEOUT_MS)
-          })
-          return await Promise.race([signInPromise, signInTimeoutPromise])
-        } finally {
-          clearTimeout(signInTimeoutId)
-        }
-      })()
-
-      logger.log("SignIn: Received response from Supabase.", { hasData: !!data, hasError: !!error })
-      if (error || !data?.session || !data?.user) {
-        logger.error("SignIn: Supabase auth error or missing session/user.", error)
-        throw new Error(getAuthErrorMessage(error || new Error("Missing session data.")))
-      }
-
-      const { user } = data
-
-      // --- Step 2: Verify session persistence ---
-      await verifySessionPersistence(user.id)
-
-      // --- Step 3: Determine Navigation Path ---
-      logger.log("SignIn: Auth successful for user:", user.email)
-      try {
-        const statusData = await (async () => {
-          const GET_USER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_GET_USER_TIMEOUT_MS) || 2000
-          try {
-            logger.log("SignIn: Checking onboarding status for navigation...")
-            const getStatusPromise = DatabaseService.checkOnboardingStatus(user.id)
-            const getUserTimeoutPromise = new Promise((_, reject) => {
-              getUserTimeoutId = setTimeout(() => reject(new Error("GetUser Timeout")), GET_USER_TIMEOUT_MS)
-            })
-            return await Promise.race([getStatusPromise, getUserTimeoutPromise])
-          } finally {
-            clearTimeout(getUserTimeoutId)
-          }
-        })()
-
-        if (statusData && !statusData.onboarding_complete) {
-          router.push("/onboarding/age")
-        } else {
-          router.push("/home")
-        }
-      } catch (e) {
-        logger.error("SignIn: Failed to get user for onboarding check (or timed out). Defaulting to onboarding.", e)
-        router.push("/onboarding/age")
-      }
-
-      // --- Step 3: Finalize UI and Background Sync ---
-      setLoading(false)
-      logger.log("SignIn: Navigation triggered, loading spinner stopped.")
-      loadUserData(user.id, user.email!).catch((err) => {
-        logger.error("SignIn: Background loadUserData failed.", err)
-      })
-    } catch (error) {
-      logger.error("SignIn: An unexpected error occurred during the sign-in process.", error)
-      if (loading) setLoading(false)
-      throw error
-    }
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    })
+    if (error) throw new Error(getAuthErrorMessage(error))
   }
 
   const signUp = async (email: string, password: string) => {
-    setLoading(true)
-    try {
-      // Sign up without email confirmation
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          emailRedirectTo: undefined, // Disable email confirmation
-        },
-      })
-
-      if (error) {
-        logger.error("Sign up error:", error)
-        throw new Error(getAuthErrorMessage(error))
-      }
-
-      if (data.user) {
-        // Create user record in database
-        try {
-          await DatabaseService.createUser(email.trim(), data.user.id)
-        } catch (dbError) {
-          logger.error("Sign up: creating user in DB failed, but might already exist.", dbError)
-        }
-
-        // Check if user is immediately signed in (no email confirmation required)
-        if (data.session) {
-          await loadUserData(data.user.id, data.user.email!)
-          router.push("/onboarding/age")
-        } else {
-          // If no session, try to sign in immediately
-          try {
-            await signIn(email.trim(), password)
-          } catch (signInError) {
-            throw new Error("Account created successfully! Please sign in with your credentials.")
-          }
-        }
-      }
-    } catch (error) {
-      logger.error("Sign up error:", error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      // Email confirmation is disabled in Supabase settings for this project
+    })
+    if (error) throw new Error(getAuthErrorMessage(error))
   }
 
   const signInWithGoogle = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) {
-        logger.error("Google sign in error:", error)
-        throw new Error(getAuthErrorMessage(error))
-      }
-    } catch (error) {
-      logger.error("Google sign in error:", error)
-      setLoading(false)
-      throw error
-    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) throw new Error(getAuthErrorMessage(error))
   }
 
   const signOut = async () => {
-    setLoading(true)
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-
-      setUser(null)
-      router.push("/")
-    } catch (error) {
+    const { error } = await supabase.auth.signOut()
+    if (error) {
       logger.error("Sign out error:", error)
       throw error
-    } finally {
-      setLoading(false)
     }
   }
 

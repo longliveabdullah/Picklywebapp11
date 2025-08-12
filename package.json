@@ -6,7 +6,8 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "test": "playwright test"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
@@ -66,6 +67,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
