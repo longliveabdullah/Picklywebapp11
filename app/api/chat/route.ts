@@ -1,6 +1,7 @@
-// app/api/chat/route.ts (edge) - Refactored for stateful conversation
+// app/api/chat/route.ts (edge) - Final robust implementation
 import { type NextRequest } from "next/server";
-import { OpenAIStream, StreamingTextResponse } from "ai";
+import OpenAI from "openai";
+import { StreamingTextResponse } from "ai"; // We still need this for the response
 import type { ProductRating } from "@/types";
 
 // Define the expected frontend message structure
@@ -11,13 +12,22 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+// Initialize OpenAI client with OpenRouter
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  defaultHeaders: {
+    "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    "X-Title": "Pickly - AI Product Analyzer",
+  },
+});
+
 export const runtime = "edge";
 
 export async function POST(request: NextRequest) {
   try {
     const { messages, productData } = await request.json();
 
-    // 1. Validate the incoming data
     if (!messages || !Array.isArray(messages) || !productData) {
       return new Response(
         JSON.stringify({ error: "Missing messages or productData" }),
@@ -25,7 +35,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Create the permanent system message with product context
     const systemMessage = {
       role: "system",
       content: `You are Pickly - a friendly and helpful product analysis assistant.
@@ -39,46 +48,39 @@ export async function POST(request: NextRequest) {
       `,
     };
 
-    // 3. Transform the frontend message history to the OpenAI format
     const transformedMessages = messages.map((message: ChatMessage) => ({
       role: message.isUser ? "user" : "assistant",
       content: message.content,
     }));
 
-    // 4. Construct the final message array for the API call
     const finalMessages = [systemMessage, ...transformedMessages];
 
-    // 5. Make the fetch call to OpenRouter
-    const body = JSON.stringify({
+    // Use the official OpenAI client to get a stream
+    const response = await openai.chat.completions.create({
       model: "deepseek/deepseek-chat-v3-0324:free",
-      messages: finalMessages, // Use the new stateful message array
+      messages: finalMessages,
       temperature: 0.7,
       max_tokens: 500,
       stream: true,
     });
 
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-        "X-Title": "Pickly - AI Product Analyzer",
+    // Manually convert the AsyncIterable from the OpenAI client to a ReadableStream
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        for await (const chunk of response) {
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) {
+            controller.enqueue(encoder.encode(content));
+          }
+        }
+        controller.close();
       },
-      body,
     });
 
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error("OpenRouter non-OK:", res.status, txt);
-      return new Response(
-        JSON.stringify({ error: "OpenRouter error", details: txt }),
-        { status: 502 }
-      );
-    }
-
-    const stream = await OpenAIStream(res);
+    // Return the stream
     return new StreamingTextResponse(stream);
+
   } catch (err) {
     console.error("Chat API error:", err);
     const msg = err instanceof Error ? err.message : String(err);
