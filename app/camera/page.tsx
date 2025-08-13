@@ -137,7 +137,8 @@ export default function CameraPage() {
       timestamp: new Date(),
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    const newMessages: ChatMessage[] = [...messages, userMessage]
+    setMessages(newMessages)
     setInputMessage("")
     setIsSending(true)
     setIsTyping(true)
@@ -155,8 +156,8 @@ export default function CameraPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: userMessage.content,
-          productRating: productRating,
+          messages: newMessages,
+          productData: productRating,
         }),
       })
 
