@@ -40,7 +40,9 @@ ${context}`;
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+        "X-Title": "Pickly - AI Product Analyzer"
       },
       body,
     });
