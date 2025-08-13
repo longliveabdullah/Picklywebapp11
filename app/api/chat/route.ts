@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server"
 import OpenAI from "openai"
-import { StreamingTextResponse } from "ai"
+import { OpenAIStream, StreamingTextResponse } from "ai"
 import type { ProductRating } from "@/types"
 
 // Initialize OpenAI client with OpenRouter
@@ -61,14 +61,7 @@ export async function POST(request: NextRequest) {
       temperature: 0.7,
     })
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        for await (const chunk of response) {
-          controller.enqueue(chunk.choices[0]?.delta?.content || "")
-        }
-        controller.close()
-      },
-    })
+    const stream = OpenAIStream(response)
     return new StreamingTextResponse(stream)
   } catch (error) {
     console.error("Chat API error:", error)
