@@ -1,74 +1,64 @@
-import { type NextRequest } from "next/server"
-import OpenAI from "openai"
-import { OpenAIStream, StreamingTextResponse } from "ai"
-import type { ProductRating } from "@/types"
+// app/api/chat/route.ts (edge) — drop-in replacement
+import { type NextRequest } from "next/server";
+import { OpenAIStream, StreamingTextResponse } from "ai";
 
-// Initialize OpenAI client with OpenRouter
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
-  defaultHeaders: {
-    "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-    "X-Title": "Pickly - AI Product Analyzer",
-  },
-})
-
-export const runtime = "edge"
-
-interface ChatRequest {
-  message: string
-  productRating: ProductRating
-}
+export const runtime = "edge";
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, productRating }: ChatRequest = await request.json()
+    const { message, productRating } = await request.json();
 
     if (!message || !productRating) {
-      return new Response("Missing message or productRating", { status: 400 })
+      return new Response(JSON.stringify({ error: "Missing message or productRating" }), { status: 400 });
     }
 
-    const { productName, rating, explanation, reasonsToBuy, reasonsToAvoid, summary } = productRating
-
     const context = `
-      Product Name: ${productName}
-      Rating: ${rating}/10
-      Summary: ${summary}
-      Explanation: ${explanation}
-      Reasons to Buy: ${reasonsToBuy?.join(", ")}
-      Reasons to Avoid: ${reasonsToAvoid?.join(", ")}
-    `
+      Product Name: ${productRating.productName}
+      Rating: ${productRating.rating}/10
+      Summary: ${productRating.summary}
+      Explanation: ${productRating.explanation}
+      ReasonsToBuy: ${(productRating.reasonsToBuy || []).join(", ")}
+      ReasonsToAvoid: ${(productRating.reasonsToAvoid || []).join(", ")}
+    `;
 
-    const prompt = `You are a helpful nutrition and product assistant named Pickly. Based on the following product analysis data, answer the user's question. Be concise, friendly, and helpful.
+    const prompt = `You are Pickly. Answer the user's question concisely and helpfully.
 
-    Product Analysis Data:
-    ${context}
+User's question: ${message}
 
-    User's question:
-    ${message}
-    `
+Product Data:
+${context}`;
 
-    const response = await openai.chat.completions.create({
-      model: "deepseek/deepseek-chat-v3-0324:free", // Switched to Deepseek model
-      stream: true,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      max_tokens: 500,
+    const body = JSON.stringify({
+      model: "deepseek/deepseek-chat-v3-0324:free",
+      messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
-    })
+      max_tokens: 500,
+      stream: true
+    });
 
-    const stream = OpenAIStream(response)
-    return new StreamingTextResponse(stream)
-  } catch (error) {
-    console.error("Chat API error:", error)
-    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred."
-    return new Response(JSON.stringify({ error: "Failed to get chat response", details: errorMessage }), {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body,
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error("OpenRouter non-OK:", res.status, txt);
+      return new Response(JSON.stringify({ error: "OpenRouter error", details: txt }), { status: 502 });
+    }
+
+    const stream = await OpenAIStream(res); // pass the raw fetch Response
+    return new StreamingTextResponse(stream);
+  } catch (err) {
+    console.error("Chat API error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: "Failed to get chat response", details: msg }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
-    })
+    });
   }
 }
