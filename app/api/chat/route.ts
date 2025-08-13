@@ -1,7 +1,7 @@
-// app/api/chat/route.ts (edge) - Final robust implementation
+// app/api/chat/route.ts (edge) - Final robust implementation without 'ai' package for response
 import { type NextRequest } from "next/server";
 import OpenAI from "openai";
-import { StreamingTextResponse } from "ai"; // We still need this for the response
+// No more 'ai' package imports for streaming!
 import type { ProductRating } from "@/types";
 
 // Define the expected frontend message structure
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     if (!messages || !Array.isArray(messages) || !productData) {
       return new Response(
         JSON.stringify({ error: "Missing messages or productData" }),
-        { status: 400 }
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
 
     const finalMessages = [systemMessage, ...transformedMessages];
 
-    // Use the official OpenAI client to get a stream
     const response = await openai.chat.completions.create({
       model: "deepseek/deepseek-chat-v3-0324:free",
       messages: finalMessages,
@@ -64,7 +63,6 @@ export async function POST(request: NextRequest) {
       stream: true,
     });
 
-    // Manually convert the AsyncIterable from the OpenAI client to a ReadableStream
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -78,8 +76,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Return the stream
-    return new StreamingTextResponse(stream);
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
 
   } catch (err) {
     console.error("Chat API error:", err);
