@@ -30,6 +30,8 @@ interface AnalyzeResponse {
   ingredients?: string[]
   healthScore?: number
   suitabilityScore?: number
+  reasonsToBuy?: string[]
+  reasonsToAvoid?: string[]
 }
 
 export async function POST(request: NextRequest) {
@@ -143,10 +145,12 @@ Always respond in JSON format with the following structure: { "brandName": strin
             explanation: parsed.summary || "Analysis completed successfully.",
             recommendations:
               Array.isArray(parsed.pros) && parsed.pros.length > 0 ? parsed.pros.slice(0, 3) : ["Use as directed"],
-            productName: parsed.productName || "Unknown Product",
+            productName: parsed.productName || parsed.brandName || "Unknown Product",
             healthScore: parsed.productDetected ? Math.max(1, Math.min(100, parsed.rating * 10)) : 0,
             suitabilityScore: parsed.confidence ? Math.max(1, Math.min(100, parsed.confidence)) : 0,
             ingredients: [], // Keep for compatibility
+            reasonsToBuy: parsed.pros || [],
+            reasonsToAvoid: parsed.cons || [],
           }
 
           console.log("✅ Successfully parsed OpenRouter response:", {
@@ -253,6 +257,16 @@ function generateMockResponse(userProfile?: any): AnalyzeResponse {
     recommendations.push("Consider alternative products better suited to your needs")
   }
 
+  const reasonsToBuy = ["Affordable", "Widely available"]
+  const reasonsToAvoid = ["Contains artificial fragrances"]
+
+  if (rating > 7) {
+    reasonsToBuy.push("High-quality ingredients")
+  }
+  if (rating < 4) {
+    reasonsToAvoid.push("May not be suitable for sensitive skin")
+  }
+
   return {
     rating,
     explanation,
@@ -261,5 +275,7 @@ function generateMockResponse(userProfile?: any): AnalyzeResponse {
     healthScore: Math.floor(Math.random() * 100) + 1,
     suitabilityScore: rating * 10,
     ingredients: ["Natural extracts", "Preservatives", "Active compounds"],
+    reasonsToBuy,
+    reasonsToAvoid,
   }
 }

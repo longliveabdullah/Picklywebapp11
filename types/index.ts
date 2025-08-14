@@ -18,12 +18,15 @@ export type UserProfile = {
 }
 
 export type ProductRating = {
-  rating: number // 1-10
-  summary?: string
-  brandName?: string
-  category?: string
-  pros?: string[]
-  cons?: string[]
+  rating: number
+  productName: string
+  explanation: string
+  recommendations: string[]
+  healthScore: number
+  suitabilityScore: number
+  reasonsToBuy: string[]
+  reasonsToAvoid: string[]
+  summary: string
 }
 
 export type ScanHistoryItem = {
