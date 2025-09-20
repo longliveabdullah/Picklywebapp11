@@ -6,7 +6,7 @@ import Link from "next/link"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle, CheckCircle } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle, CheckCircle, Chrome } from "lucide-react"
 import { AnimatedLogo } from "@/components/animated-logo"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +22,7 @@ const formSchema = z.object({
 })
 
 export default function SignInPage() {
-  const { signIn, loading } = useAuth()
+  const { signIn, signInWithGoogle, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -65,6 +65,20 @@ export default function SignInPage() {
     } catch (error: any) {
       console.error("Sign in error:", error)
       setError(error.message || "Failed to sign in. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      await signInWithGoogle()
+    } catch (error: any) {
+      console.error("Google sign in error:", error)
+      setError(error.message || "Failed to sign in with Google. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -208,6 +222,40 @@ export default function SignInPage() {
                 </Button>
               </div>
             </form>
+
+            {/* Divider and Google sign-in button */}
+            <div
+              className={`transition-all duration-500 delay-550 ${isVisible ? "animate-fadeInUp opacity-100" : "opacity-0"}`}
+            >
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGoogleSignIn}
+                disabled={isLoading}
+                className="w-full h-12 text-lg font-semibold border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-xl transition-all duration-200 bg-transparent"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                    Signing In...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Chrome className="h-5 w-5 text-blue-500" />
+                    <span className="text-gray-700">Continue with Google</span>
+                  </div>
+                )}
+              </Button>
+            </div>
 
             {/* Sign Up Link */}
             <div
