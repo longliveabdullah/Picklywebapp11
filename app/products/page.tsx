@@ -308,8 +308,11 @@ export default function ProductsPage() {
 
       {/* Floating Action Button */}
       <Button
-        onClick={() => setShowAddModal(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-700 hover:to-cyan-600 shadow-lg"
+        onClick={() => {
+          console.log("[v0] Add product button clicked")
+          setShowAddModal(true)
+        }}
+        className="fixed bottom-20 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-700 hover:to-cyan-600 shadow-lg z-40"
       >
         <Plus className="w-6 h-6" />
       </Button>
@@ -326,7 +329,15 @@ export default function ProductsPage() {
                   </div>
                   <h2 className="text-xl font-semibold text-gray-900">Add New Product</h2>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowAddModal(false)} className="p-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    console.log("[v0] Close modal button clicked")
+                    setShowAddModal(false)
+                  }}
+                  className="p-2"
+                >
                   <X className="w-5 h-5" />
                 </Button>
               </div>
@@ -338,7 +349,10 @@ export default function ProductsPage() {
                     id="product_name"
                     placeholder="e.g., Vitamin C Serum"
                     value={newProduct.product_name}
-                    onChange={(e) => setNewProduct((prev) => ({ ...prev, product_name: e.target.value }))}
+                    onChange={(e) => {
+                      console.log("[v0] Product name changed:", e.target.value)
+                      setNewProduct((prev) => ({ ...prev, product_name: e.target.value }))
+                    }}
                     required
                   />
                 </div>
