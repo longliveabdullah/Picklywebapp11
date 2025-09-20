@@ -1,6 +1,6 @@
 # Page snapshot
 
-```yaml
+\`\`\`yaml
 - dialog "Unhandled Runtime Error":
   - navigation:
     - button "previous" [disabled]:
@@ -18,4 +18,4 @@
   - text: "5 | const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! 6 | > 7 | export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey) | ^ 8 | 9 | // Server-side client for API routes 10 | export const createServerSupabaseClient = () => {"
   - heading "Call Stack" [level=2]
   - button "Show collapsed frames"
-```
+\`\`\`
