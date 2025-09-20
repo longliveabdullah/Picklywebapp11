@@ -97,7 +97,7 @@ export default function SignInPage() {
         >
           <AnimatedLogo size="xl" />
           <h1 className="text-4xl font-bold mt-4 mb-2 bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue bg-clip-text text-transparent animate-gradientShift">
-            Welcome Back
+            Welcome Back!
           </h1>
           <p className="text-gray-600 font-medium">Sign in to continue your journey</p>
         </div>
