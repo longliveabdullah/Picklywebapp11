@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createClient } from "@/lib/supabase/client"
+import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
@@ -62,10 +62,17 @@ export default function ProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const supabase = createClient()
       const { data, error } = await supabase.from("user_products").select("*").order("created_at", { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        // If table doesn't exist, create it first
+        if (error.code === "42P01") {
+          console.log("[v0] user_products table doesn't exist, will show empty state")
+          setProducts([])
+          return
+        }
+        throw error
+      }
       setProducts(data || [])
     } catch (error) {
       console.error("Error fetching products:", error)
@@ -125,7 +132,6 @@ export default function ProductsPage() {
 
     setIsSubmitting(true)
     try {
-      const supabase = createClient()
       const { error } = await supabase.from("user_products").insert({
         user_id: user.id,
         product_name: newProduct.product_name,
