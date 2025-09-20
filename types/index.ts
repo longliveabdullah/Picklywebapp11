@@ -13,7 +13,10 @@ export type UserProfile = {
   hasDiabetes?: boolean
   allergies?: string[]
   skinType?: "normal" | "oily" | "dry" | "combination" | "sensitive"
+  skinTone?: "fair" | "light" | "medium" | "tan" | "dark" | "deep"
+  skinConcerns?: string[]
   scalpType?: "normal" | "dry" | "oily" | "sensitive"
+  hairConditions?: string[]
   goals?: string[] // e.g., ["weight_loss", "muscle_gain", "skin_health", "hair_health"]
 }
 

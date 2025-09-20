@@ -32,11 +32,7 @@ export class DatabaseService {
 
   static async checkOnboardingStatus(userId: string) {
     return retryWithBackoff(async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("onboarding_complete")
-        .eq("id", userId)
-        .single()
+      const { data, error } = await supabase.from("users").select("onboarding_complete").eq("id", userId).single()
 
       if (error) throw error
       return data
@@ -79,7 +75,10 @@ export class DatabaseService {
           has_diabetes: profile.hasDiabetes || false,
           allergies: profile.allergies || null,
           skin_type: profile.skinType || null,
+          skin_tone: profile.skinTone || null,
+          skin_concerns: profile.skinConcerns || null,
           scalp_type: profile.scalpType || null,
+          hair_conditions: profile.hairConditions || null,
           goals: profile.goals || null,
           updated_at: new Date().toISOString(),
         },
@@ -114,7 +113,10 @@ export class DatabaseService {
       hasDiabetes: data.has_diabetes,
       allergies: data.allergies || undefined,
       skinType: (data.skin_type as UserProfile["skinType"]) || undefined,
+      skinTone: (data.skin_tone as UserProfile["skinTone"]) || undefined,
+      skinConcerns: data.skin_concerns || undefined,
       scalpType: (data.scalp_type as UserProfile["scalpType"]) || undefined,
+      hairConditions: data.hair_conditions || undefined,
       goals: data.goals || undefined,
     }
   }
@@ -132,7 +134,10 @@ export class DatabaseService {
           has_diabetes: profile.hasDiabetes || false,
           allergies: profile.allergies || null,
           skin_type: profile.skinType || null,
+          skin_tone: profile.skinTone || null,
+          skin_concerns: profile.skinConcerns || null,
           scalp_type: profile.scalpType || null,
+          hair_conditions: profile.hairConditions || null,
           goals: profile.goals || null,
           updated_at: new Date().toISOString(),
         },
