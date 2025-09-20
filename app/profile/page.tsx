@@ -210,7 +210,10 @@ export default function ProfilePage() {
                 <Edit2 className="w-4 h-4" />
               </div>
 
-              <Button className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-700 hover:to-cyan-600 text-white border-0 rounded-full py-3">
+              <Button
+                onClick={() => router.push("/products")}
+                className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-700 hover:to-cyan-600 text-white border-0 rounded-full py-3"
+              >
                 <Heart className="w-4 h-4 mr-2" />
                 My Personal Shelf
               </Button>
