@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useRef, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
@@ -51,11 +51,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && user) {
       const isOnAuthPage = pathname === "/" || pathname === "/signup"
-      if (isOnAuthPage) {
+      const isOnCallback = pathname === "/auth/callback"
+
+      if (isOnAuthPage && !isOnCallback) {
         if (!user.onboardingComplete) {
-          router.push("/onboarding/age")
+          router.replace("/onboarding/age")
         } else {
-          router.push("/home")
+          router.replace("/home")
         }
       }
     }
@@ -174,6 +176,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     })
     if (error) throw new Error(getAuthErrorMessage(error))
