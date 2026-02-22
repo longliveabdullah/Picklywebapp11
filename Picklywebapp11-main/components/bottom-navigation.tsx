@@ -13,7 +13,7 @@ export function BottomNavigation() {
   const { user } = useAuth()
 
   // Don't show bottom navigation on auth pages and onboarding
-  if (!user || pathname === "/" || pathname === "/auth" || pathname === "/signup" || pathname.startsWith("/onboarding")) {
+  if (!user || pathname === "/" || pathname === "/splash" || pathname === "/auth" || pathname === "/signup" || pathname.startsWith("/onboarding")) {
     return null
   }
 

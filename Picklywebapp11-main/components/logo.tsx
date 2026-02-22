@@ -15,7 +15,7 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         alt="Pickly Logo"
         width={sizes[size]}
         height={sizes[size]}
-        className="object-contain drop-shadow-[0_2px_8px_rgba(204,32,142,0.35)]"
+        className="object-contain drop-shadow-[0_2px_8px_rgba(147,51,234,0.35)]"
       />
     </Link>
   )

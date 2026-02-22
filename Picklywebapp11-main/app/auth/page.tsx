@@ -7,14 +7,17 @@ import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle, CheckCircle } from "lucide-react"
-import { AnimatedLogo } from "@/components/animated-logo"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/hooks/use-toast"
+import { Checkbox } from "@/components/ui/checkbox"
+
+const ACCENT = "#9333ea"
+const formCardTransition = { type: "tween", duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+const AUTH_BG = "/images/Yellow%20and%20Black%20Vintage%20Short%20Film%20Motivation%20Mobile%20Video.png"
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -22,13 +25,12 @@ const formSchema = z.object({
 })
 
 export default function SignInPage() {
-  const { signIn, signInWithGoogle, loading } = useAuth()
+  const { signIn, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [isVisible, setIsVisible] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const {
@@ -45,9 +47,6 @@ export default function SignInPage() {
   })
 
   useEffect(() => {
-    setIsVisible(true)
-
-    // Check for auth errors in URL
     const authError = searchParams.get("error")
     if (authError === "auth_error" || authError === "auth_failed") {
       setError("Authentication failed. Please try again.")
@@ -59,12 +58,10 @@ export default function SignInPage() {
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsLoading(true)
     setError(null)
-
     try {
       await signIn(data.email, data.password)
-    } catch (error: any) {
-      console.error("Sign in error:", error)
-      setError(error.message || "Failed to sign in. Please try again.")
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -72,157 +69,145 @@ export default function SignInPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+      <div
+        className="flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${AUTH_BG})` }}
+      >
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pickly-pink/20 to-pickly-purple/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-pickly-blue/20 to-pickly-teal/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-pickly-purple/10 to-pickly-blue/10 rounded-full blur-3xl animate-pulse delay-500"></div>
-      </div>
+    <div
+      className="min-h-screen relative overflow-hidden flex flex-col bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${AUTH_BG})` }}
+    >
+      <div className="absolute inset-0 bg-black/25 pointer-events-none" aria-hidden />
 
-      <div className="relative z-10 w-full max-w-md">
-        {/* Logo Section */}
-        <div
-          className={`text-center mb-8 transition-all duration-700 ${isVisible ? "animate-fadeInDown opacity-100" : "opacity-0"}`}
-        >
-          <AnimatedLogo size="xl" />
-          <h1 className="text-4xl font-bold mt-4 mb-2 bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue bg-clip-text text-transparent animate-gradientShift">
-            Welcome Back!
+      <div className="flex-1 min-h-[28vh] sm:min-h-[32vh]" />
+
+      <motion.div
+        className="relative z-10 flex-1 rounded-t-3xl bg-white shadow-[0_-8px_32px_rgba(0,0,0,0.08)] px-6 pt-8 pb-10 sm:px-8"
+        initial={{ opacity: 0, y: 36 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={formCardTransition}
+      >
+        <div className="mx-auto max-w-md">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900" style={{ color: ACCENT }}>
+            Welcome!
           </h1>
-          <p className="text-gray-600 font-medium">Sign in to continue your journey</p>
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Main Card */}
-        <Card
-          className={`backdrop-blur-lg bg-white/80 border-0 shadow-2xl transition-all duration-700 delay-200 ${isVisible ? "animate-scaleIn opacity-100" : "opacity-0"}`}
-        >
-          <CardContent className="p-8">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Email Field */}
-              <div
-                className={`space-y-2 transition-all duration-500 delay-300 ${isVisible ? "animate-slideInLeft opacity-100" : "opacity-0"}`}
-              >
-                <Label htmlFor="email" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email Address
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="email"
-                    placeholder="Enter your email"
-                    type="email"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    autoCorrect="off"
-                    disabled={isLoading}
-                    className="input-focus-animation pl-4 pr-10 h-12 border-2 border-gray-200 focus:border-indigo-500 rounded-xl"
-                    {...register("email")}
-                  />
-                  {errors.email ? (
-                    <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-red-500" />
-                  ) : (
-                    watch("email") && (
-                      <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
-                    )
-                  )}
-                </div>
-                {errors.email && (
-                  <p className="text-sm text-red-500 flex items-center gap-1 animate-slideInLeft">
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Password Field */}
-              <div
-                className={`space-y-2 transition-all duration-500 delay-400 ${isVisible ? "animate-slideInRight opacity-100" : "opacity-0"}`}
-              >
-                <Label htmlFor="password" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    disabled={isLoading}
-                    className="input-focus-animation pl-4 pr-10 h-12 border-2 border-gray-200 focus:border-indigo-500 rounded-xl"
-                    {...register("password")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-sm text-red-500 flex items-center gap-1 animate-slideInRight">
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.password.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <div
-                className={`transition-all duration-500 delay-500 ${isVisible ? "animate-fadeInUp opacity-100" : "opacity-0"}`}
-              >
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue hover:from-pickly-purple hover:via-pickly-blue hover:to-pickly-teal button-hover-animation rounded-xl"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Signing In...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <LogIn className="h-5 w-5" />
-                      Sign In
-                    </div>
-                  )}
-                </Button>
-              </div>
-            </form>
-
-            {/* Sign Up Link */}
-            <div
-              className={`text-center mt-6 transition-all duration-500 delay-600 ${isVisible ? "animate-fadeInUp opacity-100" : "opacity-0"}`}
+          <p className="mt-1 text-gray-600">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/signup"
+              className="font-semibold hover:underline"
+              style={{ color: ACCENT }}
             >
-              <p className="text-gray-600">
-                Don't have an account?{" "}
-                <Link href="/signup" className="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
-                  Sign up
-                </Link>
-              </p>
+              Sign up
+            </Link>
+          </p>
+
+          {error && (
+            <Alert variant="destructive" className="mt-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Email Address
+              </Label>
+              <div className="relative">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  disabled={isLoading}
+                  className="h-12 rounded-xl border-gray-200 bg-gray-50/50 focus:border-[#9333ea] focus:ring-[#9333ea]/20"
+                  {...register("email")}
+                />
+                {errors.email && (
+                  <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-red-500" />
+                )}
+                {!errors.email && watch("email") && (
+                  <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
+                )}
+              </div>
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email.message}</p>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  disabled={isLoading}
+                  className="h-12 rounded-xl border-gray-200 bg-gray-50/50 focus:border-[#9333ea] focus:ring-[#9333ea]/20 pr-10"
+                  {...register("password")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-red-500">{errors.password.message}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Checkbox
+                  checked={rememberMe}
+                  onCheckedChange={(v) => setRememberMe(!!v)}
+                  className="border-gray-300 data-[state=checked]:bg-[#9333ea] data-[state=checked]:border-[#9333ea]"
+                />
+                <span className="text-sm text-gray-600">Remember me</span>
+              </label>
+              <Link
+                href="/auth/forgot-password"
+                className="text-sm font-medium hover:underline"
+                style={{ color: ACCENT }}
+              >
+                Forgot password?
+              </Link>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 text-base font-semibold rounded-xl text-white hover:opacity-95 transition-opacity"
+              style={{ backgroundColor: ACCENT }}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Signing in...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <LogIn className="h-5 w-5" />
+                  Sign In
+                </span>
+              )}
+            </Button>
+          </form>
+        </div>
+      </motion.div>
     </div>
   )
 }
