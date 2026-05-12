@@ -3,6 +3,8 @@
 import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
+import { motion } from "framer-motion"
 import { Camera, Upload, X, AlertCircle, Clock, Send, ThumbsUp, ThumbsDown, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,6 +14,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { ScanLimitService } from "@/lib/scan-limit-service"
 import type { ProductRating } from "@/types"
+
+const ease = [0.22, 1, 0.36, 1] as const
 
 interface ChatMessage {
   id: string
@@ -345,155 +349,204 @@ export default function CameraPage() {
 
   return (
     <ProtectedRoute requireOnboarding={true}>
-      <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-purple-50/30 to-cyan-50/30">
-        <main className="container flex-1 py-4 pb-20 px-4 sm:px-6">
-          {!selectedImage ? (
-            <div className="mx-auto max-w-md space-y-6">
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  onClick={goBack}
-                  className="text-gray-600 hover:text-gray-800 hover:bg-white/80 transition-all duration-200"
-                >
-                  <X className="h-5 w-5 mr-2" />
-                  Close
-                </Button>
-              </div>
-
-              <div className="text-center space-y-4">
-                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent tracking-tight">
-                  Scan with Pickly
-                </h1>
-                <p className="text-sm sm:text-base text-gray-600 max-w-sm mx-auto leading-relaxed px-4">
-                  Point at any product label. Get instant insights on what to buy and what to avoid.
-                </p>
-              </div>
-
-              <Card className="border-0 shadow-lg bg-gradient-to-r from-pink-50 via-purple-50 to-cyan-50 mx-4 sm:mx-0">
-                <CardContent className="p-4 sm:p-5">
-                  <div className="flex items-center justify-center space-x-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-sm">
-                      <Clock className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div className="text-center">
-                      {loadingScans ? (
-                        <p className="text-gray-700 font-medium text-sm sm:text-base">Loading scan limits...</p>
-                      ) : (
-                        <>
-                          <p className="text-gray-800 font-bold text-base sm:text-lg">
-                            Daily Scans:{" "}
-                            <span className="text-lg sm:text-xl bg-gradient-to-r from-pink-600 to-cyan-600 bg-clip-text text-transparent">
-                              {remainingScans}/3
-                            </span>
-                          </p>
-                          {remainingScans === 0 && (
-                            <p className="text-xs sm:text-sm text-gray-600 mt-1">Resets tomorrow at midnight</p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {error && (
-                <Alert variant="destructive" className="bg-red-50 border-red-200 shadow-sm mx-4 sm:mx-0">
-                  <AlertCircle className="h-5 w-5" />
-                  <AlertDescription className="text-red-800 text-sm">{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {isLimitReached && !error && (
-                <Alert className="bg-amber-50 border-amber-200 shadow-sm mx-4 sm:mx-0">
-                  <AlertCircle className="h-5 w-5 text-amber-600" />
-                  <AlertDescription className="text-amber-800 text-sm">
-                    You've reached your daily limit of 3 scans. Your scan count will reset tomorrow at midnight.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <Card className="border-0 shadow-xl bg-white mx-4 sm:mx-0">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="space-y-4 sm:space-y-5">
-                    <Button
-                      onClick={handleUploadClick}
-                      className={`h-12 sm:h-14 w-full text-sm sm:text-base font-bold transition-all duration-300 transform ${
-                        isButtonDisabled
-                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                          : "bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 hover:from-pink-600 hover:via-purple-600 hover:to-cyan-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] animate-pulse"
-                      }`}
-                      size="lg"
-                      disabled={isButtonDisabled}
-                    >
-                      <Camera className="mr-2 sm:mr-3 h-4 sm:h-5 w-4 sm:w-5" />
-                      Take Photo
-                      {isLimitReached && <span className="ml-2 text-xs sm:text-sm opacity-75">(Limit Reached)</span>}
-                    </Button>
-
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-gray-200" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-white px-3 text-gray-500 font-medium tracking-wider">OR</span>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={handleUploadClick}
-                      variant="outline"
-                      className={`h-12 sm:h-14 w-full text-sm sm:text-base font-medium transition-all duration-300 transform ${
-                        isButtonDisabled
-                          ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                          : "border-2 border-purple-300 text-purple-700 hover:border-purple-400 hover:text-purple-800 hover:bg-gradient-to-r hover:from-pink-50 hover:to-cyan-50 hover:scale-[1.02] shadow-sm hover:shadow-md"
-                      }`}
-                      size="lg"
-                      disabled={isButtonDisabled}
-                    >
-                      {isScanning ? (
-                        <>
-                          <div className="w-4 sm:w-5 h-4 sm:h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mr-2 sm:mr-3" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="mr-2 sm:mr-3 h-4 sm:h-5 w-4 sm:w-5" />
-                          Upload from Gallery
-                          {isLimitReached && (
-                            <span className="ml-2 text-xs sm:text-sm opacity-75">(Limit Reached)</span>
-                          )}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileSelect}
-                multiple={false}
+      <div className="flex min-h-screen flex-col">
+        {!selectedImage ? (
+          <div className="relative flex min-h-screen flex-col">
+            {/* Background Image + Gradient Overlay */}
+            <div className="absolute inset-0">
+              <Image
+                src="/images/0f9c5cd86b8fac5258bbf4f4d4312d01.jpg"
+                alt=""
+                fill
+                className="object-cover"
+                priority
               />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#697254]/60 via-[#4D5A3C]/40 to-[#2D3A20]/80" />
             </div>
-          ) : (
-            <div className="mx-auto max-w-md space-y-6">
-              <div className="flex items-center justify-between px-4 sm:px-0">
-                <Button
-                  variant="ghost"
-                  onClick={resetScan}
-                  className="text-gray-600 hover:text-gray-800 hover:bg-white/80 transition-all duration-200"
+
+            {/* Header */}
+            <motion.header
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease }}
+              className="relative z-10 flex items-center justify-between px-5 pt-5 pb-3"
+            >
+              <button
+                onClick={goBack}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur-md transition-colors hover:bg-white/25"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M13 16L7 10L13 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+
+              <span className="text-[16px] font-extrabold tracking-wide text-white uppercase">Pickly</span>
+
+              <button
+                onClick={() => router.push("/profile")}
+                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/15 backdrop-blur-md transition-colors hover:bg-white/25"
+              >
+                {user?.avatar ? (
+                  <Image src={user.avatar} alt="" width={40} height={40} className="h-full w-full object-cover" />
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                )}
+              </button>
+            </motion.header>
+
+            {/* Spacer to push content down */}
+            <div className="flex-1" />
+
+            {/* Main Content — Glassmorphism Card */}
+            <div className="relative z-10 px-5 pb-24">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.15, ease }}
+                className="overflow-hidden rounded-3xl border border-white/20 bg-white/15 p-6 backdrop-blur-xl shadow-2xl"
+              >
+                {/* Title */}
+                <div className="mb-5 text-center">
+                  <h1 className="text-[22px] font-bold text-white">
+                    Scan with Pickly
+                  </h1>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-white/70">
+                    Point at any product label &amp; get instant insights.
+                  </p>
+                </div>
+
+                {/* Scan Limit */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: 0.25, ease }}
+                  className="mb-5 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-md"
                 >
-                  ← Back
-                </Button>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A7AD89]/40">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                  </div>
+                  {loadingScans ? (
+                    <p className="text-sm font-medium text-white/80">Loading...</p>
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white">
+                        {remainingScans} of 3 scans left today
+                      </p>
+                      {remainingScans === 0 && (
+                        <p className="mt-0.5 text-[11px] text-white/50">Resets at midnight</p>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* Error / Limit Alerts */}
+                {error && (
+                  <div className="mb-4 rounded-xl bg-red-500/20 border border-red-400/30 px-4 py-3">
+                    <p className="text-sm text-red-100">{error}</p>
+                  </div>
+                )}
+                {isLimitReached && !error && (
+                  <div className="mb-4 rounded-xl bg-amber-500/20 border border-amber-400/30 px-4 py-3">
+                    <p className="text-sm text-amber-100">Daily limit reached. Try again tomorrow!</p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.3, ease }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleUploadClick}
+                    disabled={isButtonDisabled}
+                    className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#697254] py-4 text-[15px] font-semibold text-[#EFE5D8] shadow-lg transition-all duration-200 disabled:opacity-40"
+                  >
+                    <Camera className="h-5 w-5" />
+                    Take a Photo
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.38, ease }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleUploadClick}
+                    disabled={isButtonDisabled}
+                    className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-white/25 bg-white/10 py-4 text-[15px] font-semibold text-white backdrop-blur-md transition-all duration-200 hover:bg-white/20 disabled:opacity-40"
+                  >
+                    {isScanning ? (
+                      <>
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-5 w-5" />
+                        Upload Photo
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </motion.div>
+
+              {/* Scan limit dots */}
+              {!loadingScans && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.5 }}
+                  className="mt-4 flex items-center justify-center gap-2"
+                >
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                        i < remainingScans
+                          ? "bg-[#A7AD89]"
+                          : "bg-white/20"
+                      }`}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </div>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileSelect}
+              multiple={false}
+            />
+          </div>
+        ) : (
+            <div className="mx-auto max-w-md space-y-6 bg-[#F5EFE6] min-h-screen pb-20">
+              <div className="flex items-center justify-between px-5 pt-5">
+                <button
+                  onClick={resetScan}
+                  className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[#92735C]/10"
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M13 16L7 10L13 4" stroke="#3D3D3D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                <Image src="/images/7e0b2a05-a68c-4167-b2ba-c937d73c7000.png" alt="Pickly" width={30} height={30} className="rounded-full" />
+                <div className="w-10" />
               </div>
 
-              <div className="text-center space-y-3 px-4 sm:px-0">
-                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent tracking-tight">
-                  Pickly Analysis Complete
+              <div className="text-center space-y-3 px-5">
+                <h1 className="text-xl sm:text-2xl font-bold text-[#2D2D2D]">
+                  Analysis Complete
                 </h1>
                 {isScanning ? (
                   <p className="text-gray-600 text-xs sm:text-sm">Analyzing with your personal profile...</p>
@@ -731,7 +784,6 @@ export default function CameraPage() {
               )}
             </div>
           )}
-        </main>
       </div>
     </ProtectedRoute>
   )

@@ -27,25 +27,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const CACHED_USER_KEY = "pickly-cached-user"
 
-function getInitialUser(): User | null {
-  if (typeof window === "undefined") return null
-  try {
-    const cachedUser = localStorage.getItem(CACHED_USER_KEY)
-    if (cachedUser) {
-      logger.log("Auth: Found cached user in localStorage.")
-      return JSON.parse(cachedUser)
-    }
-  } catch (error) {
-    logger.error("Auth: Could not parse cached user.", error)
-  }
-  return null
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(getInitialUser)
-  const [loading, setLoading] = useState(!user) // If user is cached, loading is initially false
+  // Always start null on both server and client to avoid hydration mismatch.
+  // The cached user is loaded client-side in the useEffect below.
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
+
+  // Rehydrate from localStorage on first client render
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(CACHED_USER_KEY)
+      if (cached) {
+        const parsed = JSON.parse(cached) as User
+        setUser(parsed)
+        setLoading(false)
+        logger.log("Auth: Rehydrated user from localStorage.")
+      }
+    } catch (error) {
+      logger.error("Auth: Could not parse cached user.", error)
+    }
+  }, [])
 
   // This useEffect handles navigation after a user signs in or signs up.
   useEffect(() => {

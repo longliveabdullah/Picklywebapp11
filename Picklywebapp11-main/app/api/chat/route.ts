@@ -12,9 +12,9 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-// Initialize OpenAI client with OpenRouter (chat assistant only)
+// Initialize OpenAI client with OpenRouter
 const openai = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
   baseURL: "https://openrouter.ai/api/v1",
   defaultHeaders: {
     "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     const finalMessages = [systemMessage, ...transformedMessages];
 
     const response = await openai.chat.completions.create({
-      model: "qwen/qwen3-next-80b-a3b-instruct:free",
+      model: "deepseek/deepseek-chat-v3-0324:free",
       messages: finalMessages,
       temperature: 0.7,
       max_tokens: 500,

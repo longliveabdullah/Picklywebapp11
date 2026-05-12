@@ -5,6 +5,7 @@ import { DM_Sans } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { BottomNavigation } from "@/components/bottom-navigation"
+import { Toaster } from "@/components/ui/toaster"
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -31,11 +32,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={dmSans.variable}>
-      <body className="font-dm-sans">
+      <body className="font-dm-sans" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light">
           <AuthProvider>
             {children}
             <BottomNavigation />
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </body>
