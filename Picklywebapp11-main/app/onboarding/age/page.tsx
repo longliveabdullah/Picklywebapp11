@@ -1,116 +1,199 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Calendar, ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/hooks/use-toast"
+import { motion } from "framer-motion"
 
-export default function OnboardingAgePage() {
-  const { user, updateUser } = useAuth()
+const categories = [
+  {
+    id: "skincare",
+    label: "Skincare",
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 6C20 6 16 6 16 10V14H24V10C24 6 20 6 20 6Z" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        <rect x="14" y="14" width="12" height="20" rx="3" stroke="#8C916C" strokeWidth="1.8" fill="none"/>
+        <path d="M14 20H26" stroke="#8C916C" strokeWidth="1.2"/>
+        <circle cx="20" cy="27" r="2.5" stroke="#8C916C" strokeWidth="1.2" fill="none"/>
+      </svg>
+    ),
+  },
+  {
+    id: "makeup",
+    label: "Makeup",
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 8H24L26 16H14L16 8Z" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        <rect x="13" y="16" width="14" height="16" rx="3" stroke="#8C916C" strokeWidth="1.8" fill="none"/>
+        <path d="M17 22H23" stroke="#8C916C" strokeWidth="1.2" strokeLinecap="round"/>
+        <path d="M17 26H23" stroke="#8C916C" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    id: "haircare",
+    label: "Haircare",
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 10C15 10 14 14 14 18C14 22 16 24 20 24C24 24 26 22 26 18C26 14 25 10 25 10" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        <path d="M18 24V32" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M22 24V32" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M15 32H25" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M20 10V6" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M17 11L15 8" stroke="#8C916C" strokeWidth="1.4" strokeLinecap="round"/>
+        <path d="M23 11L25 8" stroke="#8C916C" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    id: "fragrance",
+    label: "Fragrance",
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="15" y="16" width="10" height="16" rx="2" stroke="#8C916C" strokeWidth="1.8" fill="none"/>
+        <path d="M18 16V12H22V16" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        <path d="M20 12V8" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M16 8H24" stroke="#8C916C" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M25 20L28 18" stroke="#8C916C" strokeWidth="1.2" strokeLinecap="round"/>
+        <path d="M25 24L27 24" stroke="#8C916C" strokeWidth="1.2" strokeLinecap="round"/>
+        <circle cx="20" cy="24" r="2" stroke="#8C916C" strokeWidth="1.2" fill="none"/>
+      </svg>
+    ),
+  },
+]
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.15 },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+}
+
+export default function OnboardingCategoriesPage() {
   const router = useRouter()
-  const { toast } = useToast()
-  const [age, setAge] = useState<number | undefined>(user?.profile.age)
+  const [selected, setSelected] = useState<string[]>([])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const toggleCategory = (id: string) => {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    )
+  }
 
-    if (!age || age < 13 || age > 120) {
-      toast({
-        title: "Invalid age",
-        description: "Please enter a valid age between 13 and 120",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      await updateUser({ profile: { age } })
-      router.push("/onboarding/gender")
-    } catch (error) {
-      // Error toast is already handled in the updateUser function
-    }
+  const handleNext = () => {
+    router.push("/onboarding/gender")
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-gradient-to-r from-pickly-pink to-pickly-purple rounded-full mx-auto flex items-center justify-center mb-4">
-            <Calendar className="h-8 w-8 text-white" />
-          </div>
+    <div className="flex min-h-[100dvh] flex-col items-center pb-6 pt-12">
+      {/* Top section */}
+      <div className="flex flex-col items-center">
+        {/* Step Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-4"
+        >
+          <span className="inline-block rounded-full bg-[#A7AD89] px-4 py-1.5 text-xs font-semibold tracking-wide text-white">
+            Step 1
+          </span>
+        </motion.div>
 
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue bg-clip-text text-transparent">
-            How old are you?
+        {/* Heading */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-2 text-center"
+        >
+          <h1 className="text-[22px] font-bold leading-snug text-[#2D2D2D]">
+            Pickly helps you avoid
+            <br />
+            bad product decisions
           </h1>
-          <p className="text-base sm:text-lg text-gray-600 font-medium">
-            We use this to provide more personalized product recommendations
-          </p>
-        </div>
+        </motion.div>
 
-        {/* Form Card */}
-        <div>
-          <Card className="backdrop-blur-lg bg-white/80 border-0 shadow-xl">
-            <CardContent className="p-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="age" className="text-lg font-semibold text-gray-700 sr-only">
-                    Your Age
-                  </Label>
-                  <div>
-                    <Input
-                      id="age"
-                      type="number"
-                      min={13}
-                      max={120}
-                      value={age || ""}
-                      onChange={(e) => setAge(e.target.valueAsNumber)}
-                      placeholder="Enter your age"
-                      className="text-center text-3xl font-bold h-20 border-2 border-gray-200 focus:border-pickly-purple rounded-xl"
-                    />
-                  </div>
-                </div>
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-6 text-center text-sm font-medium text-[#4A4A4A]"
+        >
+          What do you usually shop for?
+        </motion.p>
+      </div>
 
-                <div>
-                  <Button
-                    type="submit"
-                    className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue hover:from-pickly-purple hover:via-pickly-blue hover:to-pickly-teal rounded-xl group"
-                    disabled={!age}
-                  >
-                    <div className="flex items-center gap-3">
-                      Continue
-                      <div className="h-5 w-5" />
-                    </div>
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Age Range Hints */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
-          {[
-            { range: "13-17", label: "Teen", color: "from-pink-400 to-purple-400" },
-            { range: "18-64", label: "Adult", color: "from-purple-400 to-blue-400" },
-            { range: "65+", label: "Senior", color: "from-blue-400 to-teal-400" },
-          ].map((item, index) => (
-            <div
-              key={item.range}
-              className="p-3 bg-white/60 backdrop-blur-sm rounded-xl"
+      {/* Category Grid — fills the middle */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="my-auto grid w-full grid-cols-2 gap-3"
+      >
+        {categories.map((cat) => {
+          const isSelected = selected.includes(cat.id)
+          return (
+            <motion.button
+              key={cat.id}
+              variants={itemVariants}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => toggleCategory(cat.id)}
+              className={`flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border-2 transition-all duration-200 ${
+                isSelected
+                  ? "border-[#A7AD89] bg-[#D5DBC3] shadow-md"
+                  : "border-transparent bg-white shadow-sm"
+              }`}
             >
-              <div className={`w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r ${item.color} rounded-full mx-auto mb-2`} />
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">{item.range}</p>
-              <p className="text-xs text-gray-500">{item.label}</p>
-            </div>
-          ))}
-        </div>
+              <div
+                className={`flex h-14 w-14 items-center justify-center rounded-full transition-all duration-200 ${
+                  isSelected ? "bg-[#A7AD89]/35" : "bg-[#A7AD89]/10"
+                }`}
+              >
+                {cat.icon}
+              </div>
+              <span
+                className={`text-sm font-semibold transition-colors duration-200 ${
+                  isSelected ? "text-[#3D4A30]" : "text-[#3D3D3D]"
+                }`}
+              >
+                {cat.label}
+              </span>
+            </motion.button>
+          )
+        })}
+      </motion.div>
+
+      {/* Bottom section — pinned to the bottom */}
+      <div className="mt-auto flex w-full flex-col items-center pt-6">
+        <motion.button
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          whileTap={{ scale: 0.97 }}
+          onClick={handleNext}
+          disabled={selected.length === 0}
+          className="mb-4 flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#697254] py-4 text-base font-semibold text-[#EFE5D8] shadow-lg transition-all duration-200 disabled:opacity-40"
+        >
+          Next
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M7.5 4L13.5 10L7.5 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </motion.button>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.5 }}
+          className="text-xs font-medium tracking-widest text-[#92735C]/60"
+        >
+          STEP 1 OF 3
+        </motion.p>
       </div>
     </div>
   )

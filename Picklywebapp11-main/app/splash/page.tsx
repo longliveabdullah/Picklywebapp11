@@ -7,7 +7,7 @@ import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 
 const SPLASH_DURATION_MS = 2500
-const FOOTER_GRADIENT = "linear-gradient(to bottom, #9333ea 0%, #7e22ce 35%, #5b21b6 70%, #3b82f6 100%)"
+const SPLASH_GRADIENT = "linear-gradient(to bottom, #697254 0%, #8C916C 50%, #697254 100%)"
 
 export default function SplashPage() {
   const router = useRouter()
@@ -43,7 +43,7 @@ export default function SplashPage() {
   return (
     <div
       className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden"
-      style={{ background: FOOTER_GRADIENT }}
+      style={{ background: SPLASH_GRADIENT }}
     >
       <motion.div
         className="flex flex-col items-center justify-center"
@@ -66,16 +66,16 @@ export default function SplashPage() {
           }}
         >
           <Image
-            src="/images/pickly.png"
+            src="/images/7e0b2a05-a68c-4167-b2ba-c937d73c7000.png"
             alt="Pickly"
             width={120}
             height={120}
-            className="object-contain drop-shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
+            className="object-contain rounded-full drop-shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
             priority
           />
         </motion.div>
         <motion.p
-          className="mt-6 text-xl font-semibold tracking-tight text-white/95"
+          className="mt-6 text-xl font-semibold tracking-tight text-[#EFE5D8]/95"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -84,13 +84,13 @@ export default function SplashPage() {
         </motion.p>
       </motion.div>
       <motion.div
-        className="absolute bottom-12 left-1/2 h-1 w-24 -translate-x-1/2 overflow-hidden rounded-full bg-white/20"
+        className="absolute bottom-12 left-1/2 h-1 w-24 -translate-x-1/2 overflow-hidden rounded-full bg-[#EFE5D8]/20"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
         <motion.div
-          className="h-full rounded-full bg-white"
+          className="h-full rounded-full bg-[#EFE5D8]"
           initial={{ width: "0%" }}
           animate={{ width: "100%" }}
           transition={{
