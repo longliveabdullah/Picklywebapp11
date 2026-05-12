@@ -6,10 +6,9 @@ import { motion } from "framer-motion"
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
 
-/* Profile-style gradients: hero uses diagonal; footer starts with wave purple for seamless match */
-const HERO_GRADIENT = "linear-gradient(to bottom right, #3b82f6, #9333ea, #7e22ce)"
-const FOOTER_GRADIENT = "linear-gradient(to bottom, #9333ea 0%, #7e22ce 35%, #5b21b6 70%, #3b82f6 100%)"
-const WAVE_ACCENT = "#9333ea" /* purple-600 - matches profile */
+const HERO_GRADIENT = "linear-gradient(to bottom right, #697254, #8C916C)"
+const FOOTER_GRADIENT = "linear-gradient(to bottom, #697254 0%, #8C916C 50%, #697254 100%)"
+const WAVE_ACCENT = "#697254"
 
 const easeSmooth = [0.22, 1, 0.36, 1] as const
 
@@ -22,13 +21,13 @@ const revealViewport = {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#EFE5D8]">
       {/* Hero: profile-style gradient, white text, wave at bottom */}
       <section id="home" className="relative min-h-[90vh] sm:min-h-[85vh] md:min-h-[80vh] flex flex-col" style={{ background: HERO_GRADIENT }}>
         {/* Nav */}
         <nav className="flex items-center justify-between px-4 py-4 sm:py-5 md:px-8">
           <Logo size="sm" />
-          <div className="flex items-center gap-3 sm:gap-4 md:gap-8 text-white text-xs sm:text-sm font-medium tracking-wide">
+          <div className="flex items-center gap-3 sm:gap-4 md:gap-8 text-[#EFE5D8] text-xs sm:text-sm font-medium tracking-wide">
             <a href="#home" className="hover:opacity-90 transition-opacity duration-200">
               HOME
             </a>
@@ -46,17 +45,17 @@ export default function LandingPage() {
 
         {/* Hero content - mobile: stacked, generous spacing; desktop: side by side */}
         <div className="flex-1 flex flex-col-reverse md:flex-row items-center justify-center gap-6 sm:gap-8 md:gap-12 px-5 sm:px-6 md:px-12 max-w-6xl mx-auto w-full py-6 sm:py-8 md:py-0">
-          <div className="flex-1 text-white text-center md:text-left w-full max-w-lg mx-auto md:mx-0">
+          <div className="flex-1 text-[#EFE5D8] text-center md:text-left w-full max-w-lg mx-auto md:mx-0">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 tracking-tight leading-tight sm:leading-tight">
               Personalized product ratings
             </h1>
-            <p className="text-white/95 text-sm sm:text-base md:text-lg max-w-xl mx-auto md:mx-0 mb-6 sm:mb-8 font-medium leading-relaxed">
+            <p className="text-[#EFE5D8]/95 text-sm sm:text-base md:text-lg max-w-xl mx-auto md:mx-0 mb-6 sm:mb-8 font-medium leading-relaxed">
               Don’t just pick — Pickly.
             </p>
             <Link href="/splash" className="inline-block">
               <Button
                 size="lg"
-                className="w-full sm:w-auto bg-white text-[#9333ea] hover:bg-white/90 font-semibold rounded-xl px-8 h-12 text-base shadow-lg transition-all duration-200"
+                className="w-full sm:w-auto bg-[#EFE5D8] text-[#697254] hover:bg-[#EFE5D8]/90 font-semibold rounded-xl px-8 h-12 text-base shadow-lg transition-all duration-200"
               >
                 Get started
               </Button>
@@ -78,16 +77,16 @@ export default function LandingPage() {
       </section>
 
       {/* White section with wave divider (purple wave) - "Find us on social" style */}
-      <section id="features" className="bg-white py-16 md:py-24">
+      <section id="features" className="bg-[#EFE5D8] py-16 md:py-24">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <motion.h2
-            className="text-2xl md:text-3xl font-bold text-gray-900 mb-4"
+            className="text-2xl md:text-3xl font-bold text-[#697254] mb-4"
             {...revealViewport}
           >
             Why Pickly?
           </motion.h2>
           <motion.p
-            className="text-gray-600 max-w-2xl mx-auto mb-12"
+            className="text-[#92735C] max-w-2xl mx-auto mb-12"
             initial={revealViewport.initial}
             whileInView={revealViewport.whileInView}
             viewport={revealViewport.viewport}
@@ -104,15 +103,15 @@ export default function LandingPage() {
             ].map((card, i) => (
               <motion.div
                 key={card.title}
-                className="p-6 rounded-2xl bg-gray-50 border-2 border-transparent transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-[#9333ea] hover:shadow-[0_12px_28px_-8px_rgba(147,51,234,0.25)]"
+                className="p-6 rounded-2xl bg-[#E5DACF] border-2 border-transparent transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-[#697254] hover:shadow-[0_12px_28px_-8px_rgba(105,114,84,0.25)]"
                 initial={revealViewport.initial}
                 whileInView={revealViewport.whileInView}
                 viewport={revealViewport.viewport}
                 transition={{ ...revealViewport.transition, delay: 0.1 + i * 0.08 }}
               >
                 <div className="text-3xl mb-3">{card.icon}</div>
-                <h3 className="font-semibold text-gray-900 mb-2">{card.title}</h3>
-                <p className="text-gray-600 text-sm">{card.desc}</p>
+                <h3 className="font-semibold text-[#697254] mb-2">{card.title}</h3>
+                <p className="text-[#92735C] text-sm">{card.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -122,13 +121,13 @@ export default function LandingPage() {
       {/* Wave container: white bg, purple wave at bottom */}
       <div id="about" className="wave-container">
         <div className="h-full flex flex-col items-center justify-center px-4">
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">Find us on social media</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-[#697254] mb-4">Find us on social media</h2>
           <div className="flex gap-6">
             <a
               href="https://www.linkedin.com/company/pickly-ai"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-600 hover:text-[#9333ea] transition-colors"
+              className="text-[#92735C] hover:text-[#697254] transition-colors"
               aria-label="Pickly AI on LinkedIn"
             >
               <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -139,7 +138,7 @@ export default function LandingPage() {
               href="https://www.tiktok.com/@picklyai"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-600 hover:text-[#9333ea] transition-colors"
+              className="text-[#92735C] hover:text-[#697254] transition-colors"
               aria-label="Pickly AI on TikTok"
             >
               <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -151,55 +150,55 @@ export default function LandingPage() {
       </div>
 
       {/* Footer: purple background */}
-      <footer className="text-white py-12 md:py-16" style={{ background: FOOTER_GRADIENT }}>
+      <footer className="text-[#EFE5D8] py-12 md:py-16" style={{ background: FOOTER_GRADIENT }}>
         <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-10">
           <div>
             <Logo size="sm" />
-            <p className="mt-4 text-white/90 text-sm max-w-xs">
+            <p className="mt-4 text-[#EFE5D8]/90 text-sm max-w-xs">
               Pickly helps you make informed choices with personalized AI-powered product ratings.
             </p>
           </div>
           <div>
             <h3 className="font-semibold uppercase text-sm tracking-wider mb-4">Contact us</h3>
-            <ul className="space-y-2 text-sm text-white/90">
+            <ul className="space-y-2 text-sm text-[#EFE5D8]/90">
               <li>Support: support@pickly.com</li>
               <li>Feedback: feedback@pickly.com</li>
             </ul>
           </div>
           <div>
             <h3 className="font-semibold uppercase text-sm tracking-wider mb-3">Mobile app</h3>
-            <p className="text-sm text-white/90 mb-4">Pickly mobile app coming soon.</p>
+            <p className="text-sm text-[#EFE5D8]/90 mb-4">Pickly mobile app coming soon.</p>
             <div className="flex flex-wrap items-center gap-3">
               <a
                 href="#"
                 aria-label="Get Pickly on Google Play"
-                className="inline-flex items-center gap-2 px-3 py-2.5 rounded-lg bg-black hover:bg-black/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#9333ea]"
+                className="inline-flex items-center gap-2 px-3 py-2.5 rounded-lg bg-black hover:bg-black/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#EFE5D8]/50 focus:ring-offset-2 focus:ring-offset-[#697254]"
               >
-                <svg className="h-5 w-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <svg className="h-5 w-5 text-[#EFE5D8] shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 010 1.73l-2.808 1.626L12.001 12l5.697-3.491zM5.864 2.658L16.802 8.99l-2.302 2.302-8.636-8.634z" />
                 </svg>
                 <div className="text-left">
-                  <span className="block text-[10px] text-white/90 leading-tight">GET IT ON</span>
-                  <span className="block text-sm font-medium text-white leading-tight">Google Play</span>
+                  <span className="block text-[10px] text-[#EFE5D8]/90 leading-tight">GET IT ON</span>
+                  <span className="block text-sm font-medium text-[#EFE5D8] leading-tight">Google Play</span>
                 </div>
               </a>
               <a
                 href="#"
                 aria-label="Download Pickly on the App Store"
-                className="inline-flex items-center gap-2 px-3 py-2.5 rounded-lg bg-black hover:bg-black/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#9333ea]"
+                className="inline-flex items-center gap-2 px-3 py-2.5 rounded-lg bg-black hover:bg-black/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#EFE5D8]/50 focus:ring-offset-2 focus:ring-offset-[#697254]"
               >
-                <svg className="h-6 w-6 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <svg className="h-6 w-6 text-[#EFE5D8] shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
                 </svg>
                 <div className="text-left">
-                  <span className="block text-[10px] text-white/90 leading-tight">Download on the</span>
-                  <span className="block text-sm font-medium text-white leading-tight">App Store</span>
+                  <span className="block text-[10px] text-[#EFE5D8]/90 leading-tight">Download on the</span>
+                  <span className="block text-sm font-medium text-[#EFE5D8] leading-tight">App Store</span>
                 </div>
               </a>
             </div>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto px-4 mt-10 pt-8 border-t border-white/20 text-center text-sm text-white/80">
+        <div className="max-w-6xl mx-auto px-4 mt-10 pt-8 border-t border-[#EFE5D8]/20 text-center text-sm text-[#EFE5D8]/80">
           © {new Date().getFullYear()} Pickly. All rights reserved.
         </div>
       </footer>
