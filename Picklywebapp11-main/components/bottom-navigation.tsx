@@ -20,13 +20,15 @@ const navItems = [
     ),
   },
   {
-    label: "Skin Helper",
-    href: "/products",
+    label: "Circles",
+    href: "/community",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE_COLOR : INACTIVE_COLOR} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 3C12 3 9 3 9 6v3h6V6c0-3-3-3-3-3z"/>
-        <rect x="8" y="9" width="8" height="12" rx="2"/>
-        <path d="M8 13h8"/>
+        <circle cx="8" cy="12" r="3.25"/>
+        <circle cx="16" cy="8" r="2.75"/>
+        <circle cx="16.5" cy="16" r="2.75"/>
+        <path d="M10.8 10.7l2.4-1.6"/>
+        <path d="M10.9 13.4l2.9 1.7"/>
       </svg>
     ),
   },
@@ -52,14 +54,12 @@ const navItems = [
     ),
   },
   {
-    label: "Community",
+    label: "Profile",
     href: "/profile",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE_COLOR : INACTIVE_COLOR} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-        <path d="M16 3.13a4 4 0 010 7.75"/>
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
       </svg>
     ),
   },

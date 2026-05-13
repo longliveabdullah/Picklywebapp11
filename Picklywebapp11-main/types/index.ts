@@ -11,13 +11,15 @@ export type UserProfile = {
   height?: number // in cm
   weight?: number // in kg
   hasDiabetes?: boolean
+  vegan?: boolean
   allergies?: string[]
   skinType?: "normal" | "oily" | "dry" | "combination" | "sensitive"
   skinTone?: "fair" | "light" | "medium" | "tan" | "dark" | "deep"
   skinConcerns?: string[]
+  hairType?: string
   scalpType?: "normal" | "dry" | "oily" | "sensitive"
   hairConditions?: string[]
-  goals?: string[] // e.g., ["weight_loss", "muscle_gain", "skin_health", "hair_health"]
+  goals?: string[] // e.g., hair goals, skin goals, or broader wellness preferences
 }
 
 export type ProductRating = {

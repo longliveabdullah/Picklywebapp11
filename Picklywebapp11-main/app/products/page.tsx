@@ -1,28 +1,24 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Plus, X, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
-
-interface Product {
-  id: string
-  product_name: string
-  brand: string
-  category: string
-  expiry_date: string | null
-  period_after_opening: number | null
-  status: "sealed" | "opened"
-  opened_date: string | null
-  created_at: string
-}
+import {
+  fragranceMomentMeta,
+  routineTypeMeta,
+  type FragranceMoment,
+  type RoutineType,
+  type SharedShelfProduct,
+  type ShelfCategory,
+} from "@/lib/pickly-mock-data"
+import { useSharedShelf } from "@/hooks/use-shared-shelf"
 
 const categories = [
   { value: "skin", label: "Skincare", bg: "bg-[#A7AD89]/15", accent: "#A7AD89", text: "text-[#697254]", icon: "stroke-[#697254]" },
@@ -80,8 +76,7 @@ export default function ProductsPage() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   const { toast } = useToast()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
+  const { products, addProduct } = useSharedShelf()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -98,32 +93,16 @@ export default function ProductsPage() {
     product_name: "",
     brand: "",
     category: "",
+    purchase_price: "",
+    purchase_date: new Date().toISOString().split("T")[0],
     expiry_date: "",
     period_after_opening: 12,
     status: "sealed" as "sealed" | "opened",
+    routine_type: "" as "" | RoutineType,
+    fragrance_moment: "" as "" | FragranceMoment,
   })
 
-  useEffect(() => {
-    if (user) fetchProducts()
-  }, [user])
-
-  const fetchProducts = async () => {
-    try {
-      const { data, error } = await supabase.from("user_products").select("*").order("created_at", { ascending: false })
-      if (error) {
-        if (error.code === "42P01") { setProducts([]); return }
-        throw error
-      }
-      setProducts(data || [])
-    } catch (error) {
-      console.error("Error fetching products:", error)
-      toast({ title: "Error", description: "Failed to load products", variant: "destructive" })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getProductStatus = (product: Product) => {
+  const getProductStatus = (product: SharedShelfProduct) => {
     if (!product.expiry_date) return { status: "fresh", color: "#A7AD89", label: "Fresh", bg: "bg-[#A7AD89]/15" }
     const days = Math.ceil((new Date(product.expiry_date).getTime() - Date.now()) / 86400000)
     if (days < 0) return { status: "expired", color: "#C45B4A", label: "Expired", bg: "bg-red-50" }
@@ -136,21 +115,33 @@ export default function ProductsPage() {
     if (!user) return
     setIsSubmitting(true)
     try {
-      const { error } = await supabase.from("user_products").insert({
-        user_id: user.id,
+      addProduct({
         product_name: newProduct.product_name,
         brand: newProduct.brand,
-        category: newProduct.category,
+        category: newProduct.category as ShelfCategory,
+        purchase_price: Number(newProduct.purchase_price),
+        purchase_date: newProduct.purchase_date,
         expiry_date: newProduct.expiry_date || null,
         period_after_opening: newProduct.period_after_opening,
         status: newProduct.status,
-        opened_date: newProduct.status === "opened" ? new Date().toISOString().split("T")[0] : null,
+        routine_type: newProduct.category === "fragrance" ? undefined : newProduct.routine_type || undefined,
+        fragrance_moment: newProduct.category === "fragrance" ? newProduct.fragrance_moment || undefined : undefined,
       })
-      if (error) throw error
+
       toast({ title: "Success", description: "Product added to your shelf!" })
       setShowAddModal(false)
-      setNewProduct({ product_name: "", brand: "", category: "", expiry_date: "", period_after_opening: 12, status: "sealed" })
-      fetchProducts()
+      setNewProduct({
+        product_name: "",
+        brand: "",
+        category: "",
+        purchase_price: "",
+        purchase_date: new Date().toISOString().split("T")[0],
+        expiry_date: "",
+        period_after_opening: 12,
+        status: "sealed",
+        routine_type: "",
+        fragrance_moment: "",
+      })
     } catch (error) {
       console.error("Error adding product:", error)
       toast({ title: "Error", description: "Failed to add product", variant: "destructive" })
@@ -168,18 +159,7 @@ export default function ProductsPage() {
   const groupedProducts = categories.reduce((acc, c) => {
     acc[c.value] = filteredProducts.filter((p) => p.category === c.value)
     return acc
-  }, {} as Record<string, Product[]>)
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F5EFE6]">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#697254] border-t-transparent" />
-          <p className="mt-3 text-sm text-[#92735C]">Loading your shelf...</p>
-        </div>
-      </div>
-    )
-  }
+  }, {} as Record<string, SharedShelfProduct[]>)
 
   return (
     <div className="min-h-screen bg-[#F5EFE6] pb-24">
@@ -274,6 +254,19 @@ export default function ProductsPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-bold text-[#2D2D2D]">{product.product_name}</p>
                       <p className="text-[12px] text-[#92735C]/70">{product.brand}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-semibold text-[#697254]">
+                          ${product.purchase_price.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-[#92735C]/50">
+                          Bought {new Date(product.purchase_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                        {product.category === "fragrance" && product.fragrance_moment && (
+                          <span className="rounded-full bg-[#92735C]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#92735C]">
+                            {fragranceMomentMeta[product.fragrance_moment].label}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ps.bg}`} style={{ color: ps.color }}>
@@ -356,6 +349,75 @@ export default function ProductsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="purchase_price" className="text-xs font-semibold text-[#697254]">Price *</Label>
+                    <Input
+                      id="purchase_price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="e.g., 24.99"
+                      value={newProduct.purchase_price}
+                      onChange={(e) => setNewProduct((prev) => ({ ...prev, purchase_price: e.target.value }))}
+                      required
+                      className="rounded-xl border-[#DBD0C4] bg-white focus:border-[#A7AD89] focus:ring-[#A7AD89]/30"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="purchase_date" className="text-xs font-semibold text-[#697254]">Purchase Date *</Label>
+                    <Input
+                      id="purchase_date"
+                      type="date"
+                      value={newProduct.purchase_date}
+                      onChange={(e) => setNewProduct((prev) => ({ ...prev, purchase_date: e.target.value }))}
+                      required
+                      className="rounded-xl border-[#DBD0C4] bg-white focus:border-[#A7AD89] focus:ring-[#A7AD89]/30"
+                    />
+                  </div>
+                </div>
+
+                {newProduct.category === "fragrance" ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="fragrance_moment" className="text-xs font-semibold text-[#92735C]">Perfume Slot</Label>
+                    <Select
+                      value={newProduct.fragrance_moment}
+                      onValueChange={(v) => setNewProduct((prev) => ({ ...prev, fragrance_moment: v as "" | FragranceMoment }))}
+                    >
+                      <SelectTrigger className="rounded-xl border-[#DBD0C4] bg-white">
+                        <SelectValue placeholder="Choose Morning, Night, Winter, or Summer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.entries(fragranceMomentMeta) as [FragranceMoment, { label: string }][]).map(([value, meta]) => (
+                          <SelectItem key={value} value={value}>
+                            {meta.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="routine_type" className="text-xs font-semibold text-[#697254]">Routine Fit</Label>
+                    <Select
+                      value={newProduct.routine_type}
+                      onValueChange={(v) => setNewProduct((prev) => ({ ...prev, routine_type: v as "" | RoutineType }))}
+                    >
+                      <SelectTrigger className="rounded-xl border-[#DBD0C4] bg-white">
+                        <SelectValue placeholder="Optional: where does it belong?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.entries(routineTypeMeta) as [RoutineType, { label: string; icon: string }][]).map(([value, meta]) => (
+                          <SelectItem key={value} value={value}>
+                            {meta.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="rounded-2xl bg-[#DBD0C4]/30 p-4 space-y-4">
                   <div className="flex items-center gap-2">
