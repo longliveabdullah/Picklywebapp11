@@ -38,7 +38,8 @@ function FloatingOrbs() {
             opacity: 0,
           }}
           animate={{
-            y: [0, -window.innerHeight * 1.2],
+            // Use viewport units — `window` is undefined during SSR/prerender (breaks Vercel build).
+            y: [0, "-120vh"],
             x: [0, orb.drift],
             opacity: [0, orb.opacity, orb.opacity, 0],
             scale: [0.5, 1, 1, 0.3],
