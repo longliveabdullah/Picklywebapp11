@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
@@ -14,16 +14,19 @@ import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { ProfileShareCard } from "@/components/profile-share-card"
+import { ProfileAvatar } from "@/components/profile-avatar"
 import {
   categoryMeta,
-  featuredShelfIds,
   fragranceMomentMeta,
   formatDate,
   routineTypeMeta,
   type FragranceMoment,
 } from "@/lib/pickly-mock-data"
+import { useProfileHeader } from "@/hooks/use-profile-header"
+import { DEFAULT_BIO_PLACEHOLDER, MAX_BIO_LENGTH } from "@/lib/profile-bio"
 import { useSharedRoutine } from "@/hooks/use-shared-routine"
 import { useSharedShelf } from "@/hooks/use-shared-shelf"
+import { MAX_DISPLAY_NAME_LENGTH } from "@/lib/display-name-storage"
 import type { UserProfile } from "@/types"
 
 const ease = [0.22, 1, 0.36, 1] as const
@@ -106,41 +109,9 @@ const formSchema = z.object({
   goals: z.array(z.string()).optional(),
 })
 
-const feedPosts = [
-  {
-    id: "1",
-    timeAgo: "2 hours ago",
-    text: "My barrier-first morning routine has been so good lately. Vitamin C, ceramides, SPF, and absolutely no irritation ✨",
-    image: "/images/7e0b2a05-a68c-4167-b2ba-c937d73c7000.png",
-    likes: 48,
-    comments: 12,
-  },
-  {
-    id: "2",
-    timeAgo: "Yesterday",
-    text: "Shelf check: I finally narrowed my routine down to products I actually repurchase. Quality over clutter from now on.",
-    image: "/images/7e0b2a05-a68c-4167-b2ba-c937d73c7000.png",
-    likes: 124,
-    comments: 31,
-  },
-  {
-    id: "3",
-    timeAgo: "3 days ago",
-    text: "Current PM lineup for smooth texture and a healthy glow. Pickly made it so much easier to curate this shelf 🌿",
-    image: "/images/7e0b2a05-a68c-4167-b2ba-c937d73c7000.png",
-    likes: 312,
-    comments: 67,
-  },
-]
-
-const badges = [
-  { id: "1", icon: "🧴", name: "Shelf Master", desc: "Added 10 products to shelf", earned: true },
-  { id: "2", icon: "🌿", name: "Clean Streak", desc: "5 clean products in a row", earned: true },
-  { id: "3", icon: "✨", name: "Routine Curator", desc: "Built both AM and PM routines", earned: true },
-  { id: "4", icon: "🔬", name: "Ingredient Pro", desc: "Scanned 50 products", earned: false },
-  { id: "5", icon: "💚", name: "Community Star", desc: "Reached 100 followers", earned: true },
-  { id: "6", icon: "🏆", name: "Top Reviewer", desc: "Posted 25 reviews", earned: false },
-]
+type DbFeedPost = { id: string; body: string; image_path: string | null; created_at: string }
+type DbBadge = { code: string; name: string; description: string; icon: string; earned: boolean; earned_at: string | null }
+type FollowCounts = { followers: number; following: number }
 
 export default function ProfilePage() {
   const { user, updateUser, signOut } = useAuth()
@@ -154,11 +125,108 @@ export default function ProfilePage() {
   const [selectedHairGoals, setSelectedHairGoals] = useState<string[]>(user?.profile.goals || [])
   const { routine } = useSharedRoutine()
   const { products: shelfProducts } = useSharedShelf()
+  const { displayName, bio, avatarUrl, isUploadingAvatar, setDisplayName, setBio, uploadAvatar } =
+    useProfileHeader(user?.id, user?.email)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [isEditingBio, setIsEditingBio] = useState(false)
+  const [nameDraft, setNameDraft] = useState(displayName)
+  const [bioDraft, setBioDraft] = useState(bio)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const bioInputRef = useRef<HTMLTextAreaElement>(null)
 
-  const displayName = user?.email?.split("@")[0] || "User"
+  const [feedPosts, setFeedPosts] = useState<DbFeedPost[]>([])
+  const [badges, setBadges] = useState<DbBadge[]>([])
+  const [followCounts, setFollowCounts] = useState<FollowCounts>({ followers: 0, following: 0 })
+
+  useEffect(() => {
+    if (!user?.id) return
+    fetch("/api/social/feed?limit=10").then((r) => r.json()).then((d) => { if (d.posts) setFeedPosts(d.posts) }).catch(() => {})
+    fetch("/api/badges").then((r) => r.json()).then((d) => { if (d.badges) setBadges(d.badges) }).catch(() => {})
+    fetch(`/api/follows?user_id=${user.id}`).then((r) => r.json()).then((d) => setFollowCounts({ followers: d.followers ?? 0, following: d.following ?? 0 })).catch(() => {})
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!isEditingName) setNameDraft(displayName)
+  }, [displayName, isEditingName])
+
+  useEffect(() => {
+    if (!isEditingBio) setBioDraft(bio)
+  }, [bio, isEditingBio])
+
+  useEffect(() => {
+    if (isEditingName) nameInputRef.current?.focus()
+  }, [isEditingName])
+
+  useEffect(() => {
+    if (isEditingBio) bioInputRef.current?.focus()
+  }, [isEditingBio])
+
+  const startEditingName = () => {
+    setNameDraft(displayName)
+    setIsEditingName(true)
+  }
+
+  const cancelEditingName = () => {
+    setNameDraft(displayName)
+    setIsEditingName(false)
+  }
+
+  const commitDisplayName = async () => {
+    const ok = await setDisplayName(nameDraft)
+    if (!ok) {
+      toast({
+        title: "Name required",
+        description: "Please enter at least one character.",
+        variant: "destructive",
+      })
+      return
+    }
+    setIsEditingName(false)
+    toast({ title: "Name saved", description: "Your name is saved to your account." })
+  }
+
+  const startEditingBio = () => {
+    setBioDraft(bio)
+    setIsEditingBio(true)
+  }
+
+  const cancelEditingBio = () => {
+    setBioDraft(bio)
+    setIsEditingBio(false)
+  }
+
+  const commitBio = async () => {
+    const ok = await setBio(bioDraft)
+    if (!ok) {
+      toast({
+        title: "Could not save bio",
+        description: "Please try again.",
+        variant: "destructive",
+      })
+      return
+    }
+    setIsEditingBio(false)
+    toast({ title: "Bio saved", description: "Your bio is saved to your account." })
+  }
+
+  const handleAvatarFile = async (file: File | undefined) => {
+    if (!file) return
+    const ok = await uploadAvatar(file)
+    if (ok) {
+      toast({ title: "Photo updated", description: "Your profile picture is saved." })
+    } else {
+      toast({
+        title: "Upload failed",
+        description: "Use a JPEG, PNG, or WebP under 2 MB.",
+        variant: "destructive",
+      })
+    }
+    if (avatarInputRef.current) avatarInputRef.current.value = ""
+  }
   const stats = [
-    { value: "128", label: "POSTS" },
-    { value: "2.5k", label: "FOLLOWERS" },
+    { value: `${feedPosts.length}`, label: "POSTS" },
+    { value: `${followCounts.followers}`, label: "FOLLOWERS" },
     { value: `${shelfProducts.length}`, label: "PRODUCTS" },
   ]
 
@@ -186,7 +254,7 @@ export default function ProfilePage() {
           (product) => product.category === "fragrance" && product.fragrance_moment === moment,
         ),
       })),
-      repurchased: shelfProducts.filter((product) => featuredShelfIds.repurchased.includes(product.id)),
+      repurchased: shelfProducts.filter((product) => product.is_repurchase).slice(0, 4),
     }),
     [shelfProducts],
   )
@@ -265,7 +333,8 @@ export default function ProfilePage() {
 
   const handleShare = async () => {
     const url = `${window.location.origin}/profile`
-    const text = `${displayName}'s Pickly routine: clean beauty, curated shelf, signature glow. Discover it on Pickly. ${url}`
+    const bioLine = bio ? `${bio} ` : ""
+    const text = `${displayName}'s Pickly routine. ${bioLine}Discover it on Pickly. ${url}`
 
     if (navigator.share) {
       try {
@@ -560,19 +629,86 @@ export default function ProfilePage() {
         >
           <div className="flex flex-col items-center">
             <div className="relative mb-3">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#E8E2D8] ring-4 ring-[#A7AD89]/30">
-                <span className="text-3xl font-bold text-[#697254]">
-                  {displayName[0]?.toUpperCase()}
-                </span>
-              </div>
-              <div className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#697254]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="sr-only"
+                onChange={(e) => void handleAvatarFile(e.target.files?.[0])}
+              />
+              <ProfileAvatar displayName={displayName} avatarUrl={avatarUrl} size="lg" className="bg-[#E8E2D8]" />
+              <button
+                type="button"
+                disabled={isUploadingAvatar}
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#697254] disabled:opacity-60"
+                aria-label="Change profile photo"
+              >
+                {isUploadingAvatar ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                )}
+              </button>
             </div>
 
-            <h2 className="text-lg font-bold text-[#2D2D2D]">{displayName}</h2>
+            <motion.div layout className="flex min-h-[28px] items-center justify-center gap-2 px-2">
+              {isEditingName ? (
+                <>
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    value={nameDraft}
+                    maxLength={MAX_DISPLAY_NAME_LENGTH}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitDisplayName()
+                      if (e.key === "Escape") cancelEditingName()
+                    }}
+                    className="w-[min(220px,70vw)] rounded-xl border border-[#A7AD89]/40 bg-[#FAFBF6] px-3 py-1.5 text-center text-lg font-bold text-[#2D2D2D] outline-none ring-[#697254] focus:ring-2"
+                    aria-label="Display name"
+                  />
+                  <button
+                    type="button"
+                    onClick={commitDisplayName}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#697254] text-white transition-opacity hover:opacity-90"
+                    aria-label="Save name"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditingName}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E8E2D8] text-[#697254] transition-opacity hover:opacity-90"
+                    aria-label="Cancel editing name"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startEditingName}
+                  className="group flex items-center gap-1.5 rounded-xl px-2 py-0.5 transition-colors hover:bg-[#F5EFE6]"
+                  aria-label="Edit display name"
+                >
+                  <h2 className="text-lg font-bold text-[#2D2D2D]">{displayName}</h2>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full text-[#697254]/50 transition-colors group-hover:bg-[#A7AD89]/15 group-hover:text-[#697254]">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                  </span>
+                </button>
+              )}
+            </motion.div>
 
             {profileTags.length > 0 && (
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
@@ -600,9 +736,58 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <p className="mt-4 max-w-[260px] text-center text-[13px] leading-relaxed text-[#92735C]/80">
-              Clean beauty collector. Building a shelf worth sharing and a routine that actually works. 🌿
-            </p>
+            {isEditingBio ? (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 w-full max-w-[280px] space-y-2"
+              >
+                <textarea
+                  ref={bioInputRef}
+                  value={bioDraft}
+                  onChange={(e) => setBioDraft(e.target.value.slice(0, MAX_BIO_LENGTH))}
+                  rows={3}
+                  placeholder={DEFAULT_BIO_PLACEHOLDER}
+                  className="w-full resize-none rounded-2xl border border-[#A7AD89]/40 bg-[#FAFBF6] px-3 py-2.5 text-center text-[13px] leading-relaxed text-[#2D2D2D] outline-none ring-[#697254] focus:ring-2"
+                  aria-label="Profile bio"
+                />
+                <p className="text-center text-[10px] text-[#92735C]/50">{bioDraft.length}/{MAX_BIO_LENGTH}</p>
+                <motion.div layout className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={commitBio}
+                    className="rounded-full bg-[#697254] px-4 py-1.5 text-[11px] font-bold text-white"
+                  >
+                    Save bio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditingBio}
+                    className="rounded-full bg-[#E8E2D8] px-4 py-1.5 text-[11px] font-bold text-[#697254]"
+                  >
+                    Cancel
+                  </button>
+                </motion.div>
+              </motion.div>
+            ) : (
+              <button
+                type="button"
+                onClick={startEditingBio}
+                className="group mt-4 max-w-[280px] rounded-xl px-2 py-1 text-center transition-colors hover:bg-[#F5EFE6]"
+                aria-label="Edit profile bio"
+              >
+                <p
+                  className={`text-[13px] leading-relaxed ${
+                    bio ? "text-[#92735C]/80" : "text-[#92735C]/45 italic"
+                  }`}
+                >
+                  {bio || DEFAULT_BIO_PLACEHOLDER}
+                </p>
+                <span className="mt-1 inline-block text-[10px] font-semibold text-[#697254]/40 opacity-0 transition-opacity group-hover:opacity-100">
+                  Tap to edit
+                </span>
+              </button>
+            )}
           </div>
 
           <div className="mt-6 flex items-center justify-around border-t border-[#E8E2D8] px-6 pt-5">
@@ -653,6 +838,9 @@ export default function ProfilePage() {
               transition={{ duration: 0.35, ease }}
               className="space-y-4 px-5 pt-5"
             >
+              {feedPosts.length === 0 && (
+                <p className="py-8 text-center text-[13px] text-[#92735C]/60">No posts yet. Share your first routine or scan!</p>
+              )}
               {feedPosts.map((post, i) => (
                 <motion.div
                   key={post.id}
@@ -662,54 +850,18 @@ export default function ProfilePage() {
                   className="overflow-hidden rounded-2xl bg-white shadow-sm"
                 >
                   <div className="flex items-center gap-3 p-4 pb-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#697254]">
-                      <span className="text-sm font-bold text-[#EFE5D8]">
-                        {displayName[0]?.toUpperCase()}
-                      </span>
-                    </div>
+                    <ProfileAvatar displayName={displayName} avatarUrl={avatarUrl} size="sm" />
                     <div className="flex-1">
                       <p className="text-[13px] font-bold text-[#2D2D2D]">{displayName}</p>
-                      <p className="text-[11px] text-[#92735C]/50">{post.timeAgo}</p>
+                      <p className="text-[11px] text-[#92735C]/50">{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
                     </div>
-                    <button className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[#92735C]/10">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#92735C">
-                        <circle cx="12" cy="5" r="2" />
-                        <circle cx="12" cy="12" r="2" />
-                        <circle cx="12" cy="19" r="2" />
-                      </svg>
-                    </button>
                   </div>
-
-                  <p className="px-4 pb-3 text-[13px] leading-relaxed text-[#2D2D2D]/85">
-                    {post.text}
-                  </p>
-
-                  <div className="relative h-48 w-full bg-[#E8E2D8]">
-                    <Image src={post.image} alt="Post" fill className="object-cover" />
-                  </div>
-
-                  <div className="flex items-center gap-6 px-4 py-3">
-                    <button className="flex items-center gap-1.5">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#697254" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                      </svg>
-                      <span className="text-xs font-semibold text-[#697254]">{post.likes}</span>
-                    </button>
-                    <button className="flex items-center gap-1.5">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92735C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                      </svg>
-                      <span className="text-xs font-semibold text-[#92735C]">{post.comments}</span>
-                    </button>
-                    <div className="flex-1" />
-                    <button onClick={handleShare}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92735C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-                        <polyline points="16 6 12 2 8 6" />
-                        <line x1="12" y1="2" x2="12" y2="15" />
-                      </svg>
-                    </button>
-                  </div>
+                  <p className="px-4 pb-3 text-[13px] leading-relaxed text-[#2D2D2D]/85">{post.body}</p>
+                  {post.image_path && (
+                    <div className="relative h-48 w-full bg-[#E8E2D8]">
+                      <Image src={post.image_path} alt="Post" fill className="object-cover" />
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </motion.div>
@@ -919,6 +1071,7 @@ export default function ProfilePage() {
 
                 <ProfileShareCard
                   displayName={displayName}
+                  bio={bio}
                   amSteps={routine.am}
                   pmSteps={routine.pm}
                   products={shelfProducts}
@@ -960,26 +1113,18 @@ export default function ProfilePage() {
               <div className="grid grid-cols-3 gap-3">
                 {badges.map((badge, i) => (
                   <motion.div
-                    key={badge.id}
+                    key={badge.code}
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: badge.earned ? 1 : 0.45, scale: 1 }}
                     transition={{ duration: 0.35, delay: i * 0.05, ease }}
-                    className={`flex flex-col items-center rounded-2xl p-4 text-center ${
-                      badge.earned ? "bg-white shadow-sm" : "bg-white/60"
-                    }`}
+                    className={`flex flex-col items-center rounded-2xl p-4 text-center ${badge.earned ? "bg-white shadow-sm" : "bg-white/60"}`}
                   >
                     <span className="mb-2 text-2xl">{badge.icon}</span>
-                    <p className="text-[11px] font-bold leading-tight text-[#2D2D2D]">
-                      {badge.name}
-                    </p>
-                    <p className="mt-0.5 text-[9px] leading-tight text-[#92735C]/60">
-                      {badge.desc}
-                    </p>
+                    <p className="text-[11px] font-bold leading-tight text-[#2D2D2D]">{badge.name}</p>
+                    <p className="mt-0.5 text-[9px] leading-tight text-[#92735C]/60">{badge.description}</p>
                     {badge.earned && (
                       <div className="mt-2 rounded-full bg-[#A7AD89]/20 px-2 py-0.5">
-                        <span className="text-[8px] font-bold uppercase tracking-wider text-[#697254]">
-                          Earned
-                        </span>
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-[#697254]">Earned</span>
                       </div>
                     )}
                   </motion.div>

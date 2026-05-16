@@ -4,6 +4,7 @@ import { type RoutineSelection, type SharedShelfProduct } from "@/lib/pickly-moc
 
 interface ProfileShareCardProps {
   displayName: string
+  bio?: string
   amSteps: RoutineSelection[]
   pmSteps: RoutineSelection[]
   products: SharedShelfProduct[]
@@ -11,6 +12,7 @@ interface ProfileShareCardProps {
 
 export function ProfileShareCard({
   displayName,
+  bio,
   amSteps,
   pmSteps,
   products,
@@ -27,9 +29,13 @@ export function ProfileShareCard({
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#A7AD89]">Curated with Pickly</p>
             <h3 className="mt-2 text-xl font-bold">{displayName}'s Routine</h3>
-            <p className="mt-1 max-w-[220px] text-[12px] leading-relaxed text-[#EFE5D8]/75">
-              A simple routine built with products that actually fit.
-            </p>
+            {bio ? (
+              <p className="mt-1 max-w-[220px] text-[12px] leading-relaxed text-[#EFE5D8]/75">{bio}</p>
+            ) : (
+              <p className="mt-1 max-w-[220px] text-[12px] leading-relaxed text-[#EFE5D8]/75">
+                A simple routine built with products that actually fit.
+              </p>
+            )}
           </div>
 
           <div className="rounded-full bg-white/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide">

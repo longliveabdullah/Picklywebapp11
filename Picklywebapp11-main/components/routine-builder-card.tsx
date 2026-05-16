@@ -62,6 +62,8 @@ export function RoutineBuilderCard({
       <div className="space-y-3">
         {steps.map((step, index) => {
           const options = getRoutineProductOptions(products, step.type)
+          const valueInOptions = options.some((p) => p.id === step.productId)
+          const selectValue = valueInOptions ? step.productId : (options[0]?.id ?? "")
 
           return (
             <div key={step.id} className="rounded-2xl bg-[#F5EFE6] p-3.5">
@@ -87,18 +89,27 @@ export function RoutineBuilderCard({
                 </button>
               </div>
 
-              <Select value={step.productId} onValueChange={(value) => onChangeStepProduct(step.id, value)}>
-                <SelectTrigger className="border-0 bg-white text-left shadow-none">
-                  <SelectValue placeholder={`Choose ${routineTypeMeta[step.type].label.toLowerCase()}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {options.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.product_name} · {product.brand}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {options.length === 0 ? (
+                <p className="rounded-xl bg-white/80 px-3 py-2.5 text-[11px] leading-snug text-[#92735C]/80">
+                  Add a product in this category to your shelf, then pick it here.
+                </p>
+              ) : (
+                <Select
+                  value={selectValue}
+                  onValueChange={(value) => onChangeStepProduct(step.id, value)}
+                >
+                  <SelectTrigger className="border-0 bg-white text-left shadow-none">
+                    <SelectValue placeholder={`Choose ${routineTypeMeta[step.type].label.toLowerCase()}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.product_name} · {product.brand}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )
         })}

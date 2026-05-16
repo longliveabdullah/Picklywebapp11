@@ -110,6 +110,8 @@ export default function WalletPage() {
           ))}
         </motion.div>
 
+        <p className="mb-4 px-5 text-center text-[11px] text-[#92735C]/70">Spend and purchases follow prices you set on My Shelf.</p>
+
         {activeTab === "overview" ? (
           <div className="space-y-4 px-5">
             {/* Monthly Spend Card */}

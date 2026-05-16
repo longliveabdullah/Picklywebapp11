@@ -3,7 +3,7 @@
 import type React from "react"
 import { useMemo, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Plus, X, Calendar } from "lucide-react"
+import { Plus, X, Calendar } from "@/lib/icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -115,7 +115,7 @@ export default function ProductsPage() {
     if (!user) return
     setIsSubmitting(true)
     try {
-      addProduct({
+      await addProduct({
         product_name: newProduct.product_name,
         brand: newProduct.brand,
         category: newProduct.category as ShelfCategory,

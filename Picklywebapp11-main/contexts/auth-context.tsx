@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
+import { productRatingFromScanHistoryRow } from "@/lib/product-rating-from-scan-history"
 import { logger } from "@/lib/utils"
 import type { User, ScanHistoryItem, UserProfile } from "@/types"
 import type { AuthError } from "@supabase/supabase-js"
@@ -279,11 +280,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: item.id,
         imageUrl: item.image_url,
         productName: item.product_name || undefined,
-        rating: {
+        rating: productRatingFromScanHistoryRow({
+          id: item.id,
           rating: item.rating,
           explanation: item.explanation,
           recommendations: item.recommendations,
-        },
+          product_name: item.product_name,
+          analysis_json: item.analysis_json,
+        }),
         scannedAt: new Date(item.created_at),
         userProfile: item.user_profile_snapshot as UserProfile,
       }))

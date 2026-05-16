@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
+import { useDisplayName } from "@/hooks/use-display-name"
 
 const ease = [0.22, 1, 0.36, 1] as const
 
@@ -33,7 +34,8 @@ export default function AssistantPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const displayName = user?.email?.split("@")[0] || "there"
+  const { displayName: profileDisplayName } = useDisplayName(user?.id, user?.email)
+  const displayName = profileDisplayName || "there"
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
@@ -8,12 +8,13 @@ import {
   buildProfileTags,
   calculateCompatibility,
   circleUsers,
-  circles,
   hairTypeLabel,
   matchesQuery,
   relevantReviews,
   suggestedSearchTags,
 } from "@/lib/pickly-circles-data"
+
+type DbCircle = { id: string; slug: string; name: string; description: string | null; accent: string }
 
 const ease = [0.22, 1, 0.36, 1] as const
 
@@ -160,6 +161,14 @@ function RelevantReviewCard({
 export default function CommunityPage() {
   const { user } = useAuth()
   const [query, setQuery] = useState("")
+  const [dbCircles, setDbCircles] = useState<DbCircle[]>([])
+
+  useEffect(() => {
+    fetch("/api/social/circles")
+      .then((r) => r.json())
+      .then((d) => { if (d.circles) setDbCircles(d.circles) })
+      .catch(() => {})
+  }, [])
 
   const currentProfile = user?.profile ?? {}
   const currentTags = useMemo(() => buildProfileTags(currentProfile), [currentProfile])
@@ -197,10 +206,10 @@ export default function CommunityPage() {
 
   const filteredCircles = useMemo(
     () =>
-      circles.filter((circle) =>
-        [circle.name, circle.description, ...circle.tags].some((value) => matchesQuery(value, query)),
+      dbCircles.filter((circle) =>
+        [circle.name, circle.description ?? ""].some((value) => matchesQuery(value, query)),
       ),
-    [query],
+    [dbCircles, query],
   )
 
   const filteredReviews = useMemo(
@@ -355,14 +364,14 @@ export default function CommunityPage() {
                 <span className="text-[11px] font-semibold text-[#92735C]/60">Identity-based groups</span>
               </div>
               <div className="grid grid-cols-1 gap-3">
-                {circles.map((circle) => (
+                {dbCircles.map((circle) => (
                   <CircleCard
                     key={circle.id}
                     name={circle.name}
-                    description={circle.description}
-                    tags={circle.tags}
-                    memberCount={circle.memberCount}
-                    activityLabel={circle.activityLabel}
+                    description={circle.description ?? ""}
+                    tags={[]}
+                    memberCount="—"
+                    activityLabel="Open circle"
                     accent={circle.accent}
                   />
                 ))}
@@ -431,10 +440,10 @@ export default function CommunityPage() {
                     <CircleCard
                       key={circle.id}
                       name={circle.name}
-                      description={circle.description}
-                      tags={circle.tags}
-                      memberCount={circle.memberCount}
-                      activityLabel={circle.activityLabel}
+                      description={circle.description ?? ""}
+                      tags={[]}
+                      memberCount="—"
+                      activityLabel="Open circle"
                       accent={circle.accent}
                     />
                   ))}

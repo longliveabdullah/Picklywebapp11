@@ -1,39 +1,37 @@
 import type { ProductRating } from "@/types"
+import { mapEnvelopeToProductRating } from "@/lib/map-envelope-to-product-rating"
+import type { PicklyApiEnvelope } from "@/lib/pickly-analyze/schema"
 
-export async function analyzeProduct(imageBase64: string, userId: string): Promise<ProductRating> {
-  try {
-    console.log("🔍 Starting product analysis via AI service...")
+function isPicklyApiEnvelope(payload: unknown): payload is PicklyApiEnvelope {
+  if (!payload || typeof payload !== "object") return false
+  const candidate = payload as Record<string, unknown>
+  return typeof candidate.request_id === "string" && !!candidate.result && typeof candidate.result === "object"
+}
 
-    const response = await fetch("/api/analyze-product", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        imageBase64,
-        userId,
-      }),
-    })
+export async function analyzeProduct(imageBase64: string, _userId: string): Promise<ProductRating> {
+  const response = await fetch("/api/analyze-product", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({
+      imageBase64,
+      mode: "in_store",
+      locale: typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("tr") ? "tr" : "en",
+    }),
+  })
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error("❌ AI service error:", errorData)
-      throw new Error(errorData.error || "Failed to analyze product")
-    }
+  const envelopeUnknown: unknown = await response.json()
 
-    const data = await response.json()
-    console.log("✅ AI service response:", data)
-
-    return {
-      rating: data.rating,
-      explanation: data.explanation,
-      recommendations: data.recommendations,
-      productName: data.productName,
-      healthScore: data.healthScore,
-      suitabilityScore: data.suitabilityScore,
-    }
-  } catch (error) {
-    console.error("❌ Error in AI service:", error)
-    throw error
+  if (!response.ok) {
+    const errorData = envelopeUnknown as { error?: string }
+    throw new Error(errorData.error || "Failed to analyze product")
   }
+
+  if (!isPicklyApiEnvelope(envelopeUnknown)) {
+    throw new Error("Unexpected analysis response shape")
+  }
+
+  return mapEnvelopeToProductRating(envelopeUnknown)
 }

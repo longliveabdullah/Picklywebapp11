@@ -1,3 +1,5 @@
+import type { PicklyApiEnvelope } from "@/lib/pickly-analyze/schema"
+
 export type User = {
   id: string
   email: string
@@ -6,6 +8,9 @@ export type User = {
 }
 
 export type UserProfile = {
+  displayName?: string
+  bio?: string
+  avatarUrl?: string
   age?: number
   gender?: "male" | "female" | "other" | "prefer-not-to-say"
   height?: number // in cm
@@ -19,7 +24,11 @@ export type UserProfile = {
   hairType?: string
   scalpType?: "normal" | "dry" | "oily" | "sensitive"
   hairConditions?: string[]
-  goals?: string[] // e.g., hair goals, skin goals, or broader wellness preferences
+  goals?: string[]
+  categories?: string[]
+  shoppingStyle?: string
+  purchasePriorities?: string[]
+  locale?: "en" | "tr"
 }
 
 export type ProductRating = {
@@ -32,6 +41,8 @@ export type ProductRating = {
   reasonsToBuy: string[]
   reasonsToAvoid: string[]
   summary: string
+  /** Structured Pickly analyze API payload when using `/api/analyze-product`. */
+  picklyEnvelope?: PicklyApiEnvelope
 }
 
 export type ScanHistoryItem = {

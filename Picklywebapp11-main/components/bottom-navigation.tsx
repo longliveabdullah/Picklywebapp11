@@ -4,65 +4,23 @@ import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
+import {
+  NavCamera,
+  NavCommunity,
+  NavHistory,
+  NavHome,
+  NavProfile,
+} from "@/lib/icons"
 
 const ACTIVE_COLOR = "#697254"
 const INACTIVE_COLOR = "rgba(105,114,84,0.45)"
 
 const navItems = [
-  {
-    label: "Home",
-    href: "/home",
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? ACTIVE_COLOR : "none"} stroke={active ? ACTIVE_COLOR : INACTIVE_COLOR} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
-        <path d="M9 21V12h6v9" stroke={active ? "white" : INACTIVE_COLOR} fill="none"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Circles",
-    href: "/community",
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE_COLOR : INACTIVE_COLOR} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="8" cy="12" r="3.25"/>
-        <circle cx="16" cy="8" r="2.75"/>
-        <circle cx="16.5" cy="16" r="2.75"/>
-        <path d="M10.8 10.7l2.4-1.6"/>
-        <path d="M10.9 13.4l2.9 1.7"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Scan",
-    href: "/camera",
-    isCenter: true,
-    icon: () => (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-        <circle cx="12" cy="13" r="4"/>
-      </svg>
-    ),
-  },
-  {
-    label: "History",
-    href: "/history",
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE_COLOR : INACTIVE_COLOR} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <polyline points="12 6 12 12 16 14"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Profile",
-    href: "/profile",
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE_COLOR : INACTIVE_COLOR} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-    ),
-  },
+  { label: "Home", href: "/home", Icon: NavHome },
+  { label: "Circles", href: "/community", Icon: NavCommunity },
+  { label: "Scan", href: "/camera", isCenter: true, Icon: NavCamera },
+  { label: "History", href: "/history", Icon: NavHistory },
+  { label: "Profile", href: "/profile", Icon: NavProfile },
 ]
 
 export function BottomNavigation() {
@@ -71,7 +29,9 @@ export function BottomNavigation() {
   const { user } = useAuth()
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   if (!mounted) return null
 
@@ -92,6 +52,7 @@ export function BottomNavigation() {
         <div className="mx-auto flex max-w-sm items-end justify-around px-2 pb-2 pt-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href
+            const { Icon } = item
 
             if ("isCenter" in item && item.isCenter) {
               return (
@@ -100,11 +61,13 @@ export function BottomNavigation() {
                   onClick={() => router.push(item.href)}
                   className="flex -translate-y-3 flex-col items-center"
                 >
-                  <div className={cn(
-                    "flex h-14 w-14 items-center justify-center rounded-full bg-[#697254] shadow-lg",
-                    isActive && "ring-2 ring-[#697254]/30 ring-offset-2"
-                  )}>
-                    {item.icon(true)}
+                  <div
+                    className={cn(
+                      "flex h-14 w-14 items-center justify-center rounded-full bg-[#697254] shadow-lg",
+                      isActive && "ring-2 ring-[#697254]/30 ring-offset-2",
+                    )}
+                  >
+                    <Icon size={26} color="white" strokeWidth={2} />
                   </div>
                 </button>
               )
@@ -116,11 +79,17 @@ export function BottomNavigation() {
                 onClick={() => router.push(item.href)}
                 className="flex min-w-[56px] flex-col items-center gap-0.5 py-1.5"
               >
-                {item.icon(isActive)}
-                <span className={cn(
-                  "text-[10px] font-medium",
-                  isActive ? "text-[#697254]" : "text-[#697254]/45"
-                )}>
+                <Icon
+                  size={22}
+                  color={isActive ? ACTIVE_COLOR : INACTIVE_COLOR}
+                  strokeWidth={1.8}
+                />
+                <span
+                  className={cn(
+                    "text-[10px] font-medium",
+                    isActive ? "text-[#697254]" : "text-[#697254]/45",
+                  )}
+                >
                   {item.label}
                 </span>
               </button>

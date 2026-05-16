@@ -4,10 +4,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { PicklyAssistantCard } from "@/components/pickly-assistant-card"
 import { RoutineBuilderCard } from "@/components/routine-builder-card"
 import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
 import { categoryMeta, formatDate, getProductStatus, type SharedShelfProduct } from "@/lib/pickly-mock-data"
+import { useProfileHeader } from "@/hooks/use-profile-header"
+import { ProfileAvatar } from "@/components/profile-avatar"
 import { useSharedRoutine } from "@/hooks/use-shared-routine"
 import { useSharedShelf } from "@/hooks/use-shared-shelf"
 
@@ -23,7 +26,7 @@ export default function HomePage() {
   const { routine, changeStepProduct, addStep, removeStep } = useSharedRoutine()
   const { products: shelfProducts } = useSharedShelf()
 
-  const displayName = user?.email?.split("@")[0] ?? `User_${user?.id?.slice(0, 5) ?? "guest"}`
+  const { displayName, avatarUrl } = useProfileHeader(user?.id, user?.email)
 
   return (
     <ProtectedRoute requireOnboarding={true}>
@@ -35,12 +38,7 @@ export default function HomePage() {
           transition={{ duration: 0.4, ease }}
           className="flex items-center gap-3 px-5 pb-2 pt-5"
         >
-          {/* Avatar */}
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#697254]">
-            <span className="text-sm font-bold text-[#EFE5D8]">
-              {displayName[0]?.toUpperCase()}
-            </span>
-          </div>
+          <ProfileAvatar displayName={displayName} avatarUrl={avatarUrl} size="sm" />
 
           {/* Greeting */}
           <div className="flex-1 min-w-0">
@@ -107,23 +105,6 @@ export default function HomePage() {
               </p>
             </button>
 
-            {/* Search Card — Cream */}
-            <button
-              onClick={() => router.push("/products")}
-              className="flex w-[145px] shrink-0 flex-col items-center justify-start rounded-2xl bg-[#DBD0C4]/50 px-4 pb-5 pt-5 text-center transition-shadow hover:shadow-md"
-            >
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#DBD0C4]/60">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#92735C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="M21 21l-4.35-4.35"/>
-                </svg>
-              </div>
-              <p className="text-[14px] font-bold text-[#2D2D2D]">Search</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-[#92735C]/70">
-                Look up over 20,000 skincare products.
-              </p>
-            </button>
-
             {/* Pickly Wallet Card — Sand */}
             <button
               onClick={() => router.push("/wallet")}
@@ -184,59 +165,10 @@ export default function HomePage() {
           </motion.div>
         </div>
 
-        {/* Pickly Assistant */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.18, ease }}
-          className="mx-5 mt-6"
-        >
-          <button
-            onClick={() => router.push("/assistant")}
-            className="group relative w-full overflow-hidden rounded-2xl bg-[#697254] p-5 text-left shadow-md transition-shadow hover:shadow-lg"
-          >
-            <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-[#A7AD89]/20" />
-            <div className="absolute -bottom-4 -right-2 h-20 w-20 rounded-full bg-[#A7AD89]/10" />
-
-            <div className="relative flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a4 4 0 014 4v2H8V6a4 4 0 014-4z" />
-                  <rect x="5" y="8" width="14" height="13" rx="2" />
-                  <circle cx="9.5" cy="14" r="1.5" />
-                  <circle cx="14.5" cy="14" r="1.5" />
-                  <path d="M9.5 18.5c1 1 4 1 5 0" />
-                </svg>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-bold text-white">Pickly Assistant</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-[#EFE5D8]/75">
-                  Scan a product or ask me anything about ingredients, routines, or alternatives.
-                </p>
-              </div>
-
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:translate-x-0.5">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14" />
-                  <path d="M12 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-
-            <div className="relative mt-4 flex gap-2">
-              {["Scan Product", "Ask About Ingredients", "Find Alternatives"].map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-semibold text-[#EFE5D8]/80"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </button>
-        </motion.div>
-
+        <PicklyAssistantCard
+          onOpen={() => router.push("/assistant")}
+          onRoutineHelp={() => router.push("/assistant")}
+        />
         {/* Routine Builder Card */}
         <motion.div
           initial={{ opacity: 0, y: 14 }}
@@ -301,7 +233,16 @@ export default function HomePage() {
             className="flex gap-3 overflow-x-auto px-5 pb-2"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            {shelfProducts.map((product) => {
+            {shelfProducts.length === 0 ? (
+              <p className="py-2 text-[13px] leading-relaxed text-[#92735C]/75">
+                Your shelf is empty. Add items from{" "}
+                <button type="button" className="font-semibold text-[#697254] underline" onClick={() => router.push("/products?add=true")}>
+                  My Shelf
+                </button>{" "}
+                or save a scan.
+              </p>
+            ) : (
+              shelfProducts.map((product) => {
               const meta = categoryMeta[product.category] || categoryMeta.skin
               const ps = getProductStatus(product)
               return (
@@ -335,7 +276,8 @@ export default function HomePage() {
                   </div>
                 </div>
               )
-            })}
+            })
+            )}
           </motion.div>
         </div>
 
