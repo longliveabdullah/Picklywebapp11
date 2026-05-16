@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
+import { hasAcceptedOnboardingTerms } from "@/lib/onboarding-terms-storage"
 
 const SPLASH_DURATION_MS = 2500
 const SPLASH_GRADIENT = "linear-gradient(to bottom, #697254 0%, #8C916C 50%, #697254 100%)"
@@ -19,7 +20,8 @@ export default function SplashPage() {
     // Logged-in users skip splash and go to app
     if (user) {
       if (!user.onboardingComplete) {
-        router.replace("/onboarding/age")
+        const termsOk = Boolean(user.id && hasAcceptedOnboardingTerms(user.id))
+        router.replace(termsOk ? "/onboarding/age" : "/onboarding/terms")
       } else {
         router.replace("/home")
       }

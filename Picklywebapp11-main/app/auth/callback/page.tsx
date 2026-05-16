@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { hasAcceptedOnboardingTerms } from "@/lib/onboarding-terms-storage"
 
 export default function AuthCallback() {
   const { user, loading } = useAuth()
@@ -18,7 +19,8 @@ export default function AuthCallback() {
 
       // Direct navigation based on onboarding status
       if (!user.onboardingComplete) {
-        router.replace("/onboarding/age")
+        const termsOk = Boolean(user.id && hasAcceptedOnboardingTerms(user.id))
+        router.replace(termsOk ? "/onboarding/age" : "/onboarding/terms")
       } else {
         router.replace("/home")
       }

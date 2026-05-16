@@ -1,0 +1,182 @@
+[
+  {
+    "brand": "CeraVe",
+    "product_name": "Nemlendirici Krem",
+    "category": "skincare",
+    "full_title": "CeraVe Nemlendirici Krem 340ml",
+    "expected_match_contains": "cerave",
+    "expected_size": "340ml",
+    "retailers_expected": ["trendyol", "gratis", "watsons"]
+  },
+  {
+    "brand": "CeraVe",
+    "product_name": "Yüz Temizleme Jeli",
+    "category": "skincare",
+    "full_title": "CeraVe Köpüren Temizleyici 236ml",
+    "expected_match_contains": "cerave",
+    "expected_size": "236ml",
+    "retailers_expected": ["trendyol", "watsons"]
+  },
+  {
+    "brand": "La Roche Posay",
+    "product_name": "Anthelios Invisible Fluid",
+    "category": "skincare",
+    "full_title": "La Roche Posay Anthelios Invisible Fluid SPF50+ 50ml",
+    "expected_match_contains": "la roche",
+    "expected_size": "50ml",
+    "retailers_expected": ["trendyol", "watsons"]
+  },
+  {
+    "brand": "Bioderma",
+    "product_name": "Sensibio H2O",
+    "category": "skincare",
+    "full_title": "Bioderma Sensibio H2O 500ml",
+    "expected_match_contains": "bioderma",
+    "expected_size": "500ml",
+    "retailers_expected": ["trendyol", "gratis", "watsons"]
+  },
+  {
+    "brand": "The Ordinary",
+    "product_name": "Niacinamide 10% Zinc 1%",
+    "category": "skincare",
+    "full_title": "The Ordinary Niacinamide 10% + Zinc 1% 30ml",
+    "expected_match_contains": "ordinary",
+    "expected_size": "30ml",
+    "retailers_expected": ["sephora", "trendyol"]
+  },
+  {
+    "brand": "Maybelline",
+    "product_name": "Lash Sensational Mascara",
+    "category": "makeup",
+    "full_title": "Maybelline Lash Sensational Sky High Mascara",
+    "expected_match_contains": "maybelline",
+    "expected_size": null,
+    "retailers_expected": ["gratis", "watsons", "rossmann"]
+  },
+  {
+    "brand": "L'Oreal Paris",
+    "product_name": "Telescopic Mascara",
+    "category": "makeup",
+    "full_title": "L'Oreal Paris Telescopic Mascara Black",
+    "expected_match_contains": "loreal",
+    "expected_size": null,
+    "retailers_expected": ["gratis", "watsons"]
+  },
+  {
+    "brand": "NYX",
+    "product_name": "Soft Matte Lip Cream",
+    "category": "makeup",
+    "full_title": "NYX Professional Makeup Soft Matte Lip Cream",
+    "expected_match_contains": "nyx",
+    "expected_size": null,
+    "retailers_expected": ["trendyol", "watsons"]
+  },
+  {
+    "brand": "Dove",
+    "product_name": "Intensive Repair Shampoo",
+    "category": "haircare",
+    "full_title": "Dove Intensive Repair Şampuan 400ml",
+    "expected_match_contains": "dove",
+    "expected_size": "400ml",
+    "retailers_expected": ["gratis", "rossmann", "watsons"]
+  },
+  {
+    "brand": "Elseve",
+    "product_name": "Mucizevi Yağ",
+    "category": "haircare",
+    "full_title": "Elseve Mucizevi Yağ Saç Bakım Yağı 100ml",
+    "expected_match_contains": "elseve",
+    "expected_size": "100ml",
+    "retailers_expected": ["gratis", "watsons", "rossmann"]
+  },
+  {
+    "brand": "Head & Shoulders",
+    "product_name": "Classic Clean Shampoo",
+    "category": "haircare",
+    "full_title": "Head & Shoulders Classic Clean Şampuan 350ml",
+    "expected_match_contains": "head",
+    "expected_size": "350ml",
+    "retailers_expected": ["gratis", "rossmann", "watsons"]
+  },
+  {
+    "brand": "Nuxe",
+    "product_name": "Huile Prodigieuse",
+    "category": "skincare",
+    "full_title": "Nuxe Huile Prodigieuse Çok Amaçlı Kuru Yağ 100ml",
+    "expected_match_contains": "nuxe",
+    "expected_size": "100ml",
+    "retailers_expected": ["sephora", "trendyol"]
+  },
+  {
+    "brand": "Dior",
+    "product_name": "Sauvage Eau de Parfum",
+    "category": "fragrance",
+    "full_title": "Dior Sauvage Eau de Parfum 100ml",
+    "expected_match_contains": "dior",
+    "expected_size": "100ml",
+    "retailers_expected": ["sephora"]
+  },
+  {
+    "brand": "Yves Saint Laurent",
+    "product_name": "Libre Eau de Parfum",
+    "category": "fragrance",
+    "full_title": "Yves Saint Laurent Libre Eau de Parfum 90ml",
+    "expected_match_contains": "libre",
+    "expected_size": "90ml",
+    "retailers_expected": ["sephora"]
+  },
+  {
+    "brand": "Garnier",
+    "product_name": "Micellar Cleansing Water",
+    "category": "skincare",
+    "full_title": "Garnier Micellar Temizleme Suyu 400ml",
+    "expected_match_contains": "garnier",
+    "expected_size": "400ml",
+    "retailers_expected": ["gratis", "rossmann", "watsons"]
+  },
+  {
+    "brand": "Neutrogena",
+    "product_name": "Hydro Boost Water Gel",
+    "category": "skincare",
+    "full_title": "Neutrogena Hydro Boost Water Gel 50ml",
+    "expected_match_contains": "neutrogena",
+    "expected_size": "50ml",
+    "retailers_expected": ["gratis", "watsons"]
+  },
+  {
+    "brand": "Benefit",
+    "product_name": "Hoola Bronzer",
+    "category": "makeup",
+    "full_title": "Benefit Hoola Bronzer 8g",
+    "expected_match_contains": "benefit",
+    "expected_size": "8g",
+    "retailers_expected": ["sephora"]
+  },
+  {
+    "brand": "Clinique",
+    "product_name": "Moisture Surge",
+    "category": "skincare",
+    "full_title": "Clinique Moisture Surge 100H Auto-Replenishing Hydrator 50ml",
+    "expected_match_contains": "clinique",
+    "expected_size": "50ml",
+    "retailers_expected": ["sephora"]
+  },
+  {
+    "brand": "Simple",
+    "product_name": "Refreshing Facial Wash",
+    "category": "skincare",
+    "full_title": "Simple Refreshing Facial Wash 150ml",
+    "expected_match_contains": "simple",
+    "expected_size": "150ml",
+    "retailers_expected": ["gratis", "watsons"]
+  },
+  {
+    "brand": "Milk",
+    "product_name": "Hydro Grip Primer",
+    "category": "makeup",
+    "full_title": "Milk Makeup Hydro Grip Primer 45ml",
+    "expected_match_contains": "hydro grip",
+    "expected_size": "45ml",
+    "retailers_expected": ["sephora"]
+  }
+]

@@ -24,6 +24,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { PriceSearch } from "@/components/PriceSearch"
 import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
 import { useSharedRoutine } from "@/hooks/use-shared-routine"
@@ -261,6 +262,24 @@ export default function CameraPage() {
         : null,
     [productRating, uiResultMode, routine, shelfProducts, user?.profile],
   )
+
+  const priceSearchProduct = useMemo(() => {
+    const result = productRating?.picklyEnvelope?.result
+    if (!result) return null
+
+    const productName = result?.productName?.trim()
+    const brand = result?.brand?.trim()
+
+    if (!productName || !brand) return null
+    if (brand.toLowerCase() === "unknown" || productName.toLowerCase().includes("unrecognized")) return null
+
+    return {
+      productName,
+      brand,
+      category: result.category,
+      fullTitle: `${brand} ${productName}`.trim(),
+    }
+  }, [productRating])
 
   const heroTheme = viewModel ? heroThemeClasses[viewModel.heroTheme] : heroThemeClasses.neutral
 
@@ -1150,6 +1169,22 @@ export default function CameraPage() {
                       </div>
                     </div>
                   </motion.div>
+
+                  {priceSearchProduct && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 14 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.42, delay: 0.04, ease }}
+                    >
+                      <PriceSearch
+                        productName={priceSearchProduct.productName}
+                        brand={priceSearchProduct.brand}
+                        category={priceSearchProduct.category}
+                        fullTitle={priceSearchProduct.fullTitle}
+                        locale={user?.profile?.locale === "tr" ? "tr" : clientLocale()}
+                      />
+                    </motion.div>
+                  )}
 
                   <motion.div
                     initial={{ opacity: 0, y: 14 }}

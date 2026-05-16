@@ -1,4 +1,14 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+async function acceptSignupAndOnboardingTerms(page: Page) {
+  await page.getByTestId('signup-terms-checkbox').click();
+  await page.click('button[type="submit"]');
+  await page.waitForURL('**/onboarding/terms', { timeout: 15000 });
+  await page.getByTestId('onboarding-terms-checkbox').click();
+  await page.getByTestId('onboarding-terms-continue').click();
+  await page.waitForURL('**/onboarding/age', { timeout: 15000 });
+}
 
 test.describe('Authentication', () => {
   const email = `testuser-${Date.now()}@example.com`;
@@ -9,8 +19,7 @@ test.describe('Authentication', () => {
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
     await page.fill('input[name="confirmPassword"]', password);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/onboarding/age', { timeout: 10000 });
+    await acceptSignupAndOnboardingTerms(page);
     expect(page.url()).toContain('/onboarding/age');
   });
 
@@ -20,11 +29,10 @@ test.describe('Authentication', () => {
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
     await page.fill('input[name="confirmPassword"]', password);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/onboarding/age');
+    await acceptSignupAndOnboardingTerms(page);
 
-    // For the purpose of this test, I will directly navigate to the home page.
-    await page.goto('/home');
+    // Dev-only sign-out control is on pages that render Header (e.g. Premium).
+    await page.goto('/premium');
 
     // Click the signout button
     await page.click('[data-testid="signout-button"]');
@@ -38,11 +46,10 @@ test.describe('Authentication', () => {
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
     await page.fill('input[name="confirmPassword"]', password);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/onboarding/age');
+    await acceptSignupAndOnboardingTerms(page);
 
     // Sign out
-    await page.goto('/home');
+    await page.goto('/premium');
     await page.click('[data-testid="signout-button"]');
     await page.waitForURL('**/');
 
@@ -51,8 +58,8 @@ test.describe('Authentication', () => {
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
     await page.click('button[type="submit"]');
-    await page.waitForURL('**/onboarding/age');
-    expect(page.url()).toContain('/onboarding/age');
+    await page.waitForURL('**/onboarding/terms');
+    expect(page.url()).toContain('/onboarding/terms');
   });
 
   test('should not allow an unauthenticated user to access protected routes', async ({ page }) => {
