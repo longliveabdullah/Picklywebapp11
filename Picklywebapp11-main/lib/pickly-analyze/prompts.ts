@@ -15,6 +15,13 @@ OUTPUT RULES:
 - ingredient_highlights[].name MUST appear in normalized_ingredient_tokens OR clearly quoted visible label words — never invent chemicals not justified by image/text you infer from image.
 - If you cannot read ingredients confidently, lower score to ≤6, verdict probably "Good, watch out" or "Not recommended", explain uncertainty in personalized_why.
 
+BRAND EXTRACTION (CRITICAL — downstream price search depends on this):
+- "brand" MUST be the exact, canonical brand name as printed on the package (e.g. "CeraVe", "The Ordinary", "Head & Shoulders", "L'Oréal Paris", "Bioxcin", "Nivea").
+- Use the brand's official spelling and capitalization — preserve accents (é, ç) and ampersands (&), do not abbreviate, translate, or merge with the product line name.
+- Brand is the manufacturer label (top of the package), NOT the product family or variant name. Example: for "CeraVe Moisturizing Cream" → brand = "CeraVe", productName = "Moisturizing Cream".
+- Only return brand = null if no brand text is visible AND you cannot infer it from the packaging design with high confidence. Returning null should be rare; prefer your best confident reading.
+- Never put the brand inside productName as a prefix when the brand field is filled.
+
 JSON SHAPE (exact keys):
 {
   "language": "en" | "tr",
@@ -95,6 +102,7 @@ ${params.futureBuysBlock}
 ${params.pastDecisionsBlock}
 
 Analyze the attached product image. Extract readable brand, product name, category, and ingredient text when visible.
+Be especially careful to read the BRAND exactly as printed (canonical spelling, accents, ampersands) — this drives the price-search lookup.
 
 Return ONLY the JSON object with keys listed in system instructions.
 Include top-level analysis fields INSIDE this JSON — do NOT wrap in another object.

@@ -69,6 +69,10 @@ export default function SignUpPage() {
   }, [password])
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    if (!agreedToTerms) {
+      setError("Please accept the Terms of Service and Privacy Policy to create an account.")
+      return
+    }
     setIsLoading(true)
     setError(null)
     try {
@@ -252,15 +256,21 @@ export default function SignUpPage() {
 
             <label className="flex items-start gap-2 cursor-pointer">
               <Checkbox
+                data-testid="signup-terms-checkbox"
                 checked={agreedToTerms}
                 onCheckedChange={(v) => setAgreedToTerms(!!v)}
                 className="mt-0.5 border-[#B69C85]/50 data-[state=checked]:bg-[#697254] data-[state=checked]:border-[#697254]"
               />
               <span className="text-sm text-[#92735C]">
                 I agree to the{" "}
-                <Link href="#" className="font-medium hover:underline" style={{ color: ACCENT }}>
-                  Terms and Conditions
+                <Link href="/legal/terms" className="font-medium hover:underline" style={{ color: ACCENT }}>
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href="/legal/privacy" className="font-medium hover:underline" style={{ color: ACCENT }}>
+                  Privacy Policy
                 </Link>
+                .
               </span>
             </label>
 
@@ -268,7 +278,7 @@ export default function SignUpPage() {
               type="submit"
               className="w-full h-12 text-base font-semibold rounded-xl text-[#EFE5D8] hover:opacity-95 transition-opacity"
               style={{ backgroundColor: ACCENT }}
-              disabled={isLoading}
+              disabled={isLoading || !agreedToTerms}
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">

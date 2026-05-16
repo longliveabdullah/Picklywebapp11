@@ -12,7 +12,8 @@ import {
   type DbProfileShape,
 } from "@/lib/pickly-analyze/context-blocks"
 import { fallbackAnalyzeBody } from "@/lib/pickly-analyze/fallback-body"
-import { createOpenRouterClient, parseBodyFromContent, runRepairJson, runVisionAnalyze } from "@/lib/pickly-analyze/run-model"
+import { createOpenRouterClient } from "@/lib/openrouter-client"
+import { parseBodyFromContent, runRepairJson, runVisionAnalyze } from "@/lib/pickly-analyze/run-model"
 import { shouldPrefetchResearchForShelf } from "@/lib/pickly-analyze/shelf-escalation"
 import {
   AnalyzeProductRequestSchema,

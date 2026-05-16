@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { hasAcceptedOnboardingTerms } from "@/lib/onboarding-terms-storage"
 
 export default function ProtectedRoute({
   children,
@@ -21,7 +22,8 @@ export default function ProtectedRoute({
       if (!user) {
         router.push("/auth")
       } else if (requireOnboarding && !user.onboardingComplete) {
-        router.push("/onboarding/age")
+        const termsOk = Boolean(user.id && hasAcceptedOnboardingTerms(user.id))
+        router.push(termsOk ? "/onboarding/age" : "/onboarding/terms")
       }
     }
   }, [user, loading, router, requireOnboarding])

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { cloneDefaultRoutine, type RoutinePeriod, type RoutineSelection, type RoutineType } from "@/lib/pickly-mock-data"
+import type { SharedShelfProduct } from "@/lib/shelf-types"
 import { useSharedShelf } from "@/hooks/use-shared-shelf"
 
 const ROUTINE_STORAGE_KEY = "pickly-shared-routine"
@@ -32,10 +33,13 @@ function remapRoutineToValidProducts(
   }
 }
 
-export function useSharedRoutine() {
+/**
+ * Use the same `products` / `shelfReady` instance as `useSharedShelf()` on that screen
+ * so routine steps and dropdowns stay aligned with the shelf (e.g. home page).
+ */
+export function useSharedRoutineWithProducts(products: SharedShelfProduct[], shelfReady: boolean) {
   const { user } = useAuth()
   const [routine, setRoutine] = useState<SharedRoutine>(() => cloneDefaultRoutine())
-  const { products, shelfReady } = useSharedShelf()
   const didHydrateFromStorage = useRef(false)
 
   useEffect(() => {
@@ -115,4 +119,10 @@ export function useSharedRoutine() {
     addStep,
     removeStep,
   }
+}
+
+/** Loads shelf internally. Prefer `useSharedRoutineWithProducts` when the page already calls `useSharedShelf()`. */
+export function useSharedRoutine() {
+  const { products, shelfReady } = useSharedShelf()
+  return useSharedRoutineWithProducts(products, shelfReady)
 }

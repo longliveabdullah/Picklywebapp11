@@ -200,6 +200,31 @@ export default function SettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.18, ease }}
+            className="rounded-3xl bg-white p-5 shadow-sm"
+          >
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#92735C]/50">Legal</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => router.push("/legal/terms")}
+                className="rounded-full bg-[#F5EFE6] px-4 py-2 text-[12px] font-semibold text-[#697254] transition-colors hover:bg-[#EFE7DB]"
+              >
+                Terms of Service
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/legal/privacy")}
+                className="rounded-full bg-[#F5EFE6] px-4 py-2 text-[12px] font-semibold text-[#697254] transition-colors hover:bg-[#EFE7DB]"
+              >
+                Privacy Policy
+              </button>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2, ease }}
             className="rounded-3xl bg-[#697254] p-5 text-[#EFE5D8] shadow-sm"
           >

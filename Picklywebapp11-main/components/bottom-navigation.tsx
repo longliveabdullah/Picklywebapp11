@@ -42,7 +42,8 @@ export function BottomNavigation() {
     pathname === "/auth" ||
     pathname.startsWith("/auth/") ||
     pathname === "/signup" ||
-    pathname.startsWith("/onboarding")
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/legal")
 
   if (hidden) return null
 

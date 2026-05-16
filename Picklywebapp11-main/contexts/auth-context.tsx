@@ -6,6 +6,10 @@ import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { DatabaseService } from "@/lib/database-service"
 import { productRatingFromScanHistoryRow } from "@/lib/product-rating-from-scan-history"
+import {
+  clearOnboardingTermsAcceptance,
+  hasAcceptedOnboardingTerms,
+} from "@/lib/onboarding-terms-storage"
 import { logger } from "@/lib/utils"
 import type { User, ScanHistoryItem, UserProfile } from "@/types"
 import type { AuthError } from "@supabase/supabase-js"
@@ -59,7 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (isOnAuthPage && !isOnCallback) {
         if (!user.onboardingComplete) {
-          router.replace("/onboarding/age")
+          const termsOk = Boolean(user.id && hasAcceptedOnboardingTerms(user.id))
+          router.replace(termsOk ? "/onboarding/age" : "/onboarding/terms")
         } else {
           router.replace("/home")
         }
@@ -190,6 +195,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    try {
+      const cached = localStorage.getItem(CACHED_USER_KEY)
+      if (cached) {
+        const parsed = JSON.parse(cached) as User
+        if (parsed?.id) clearOnboardingTermsAcceptance(parsed.id)
+      }
+    } catch {
+      /* ignore */
+    }
     localStorage.removeItem(CACHED_USER_KEY)
     const { error } = await supabase.auth.signOut()
     if (error) {

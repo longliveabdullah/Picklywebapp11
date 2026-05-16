@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { categoryMeta, formatDate, getProductStatus, type SharedShelfProduct } from "@/lib/pickly-mock-data"
 import { useProfileHeader } from "@/hooks/use-profile-header"
 import { ProfileAvatar } from "@/components/profile-avatar"
-import { useSharedRoutine } from "@/hooks/use-shared-routine"
+import { useSharedRoutineWithProducts } from "@/hooks/use-shared-routine"
 import { useSharedShelf } from "@/hooks/use-shared-shelf"
 
 const ease = [0.22, 1, 0.36, 1] as const
@@ -23,8 +23,8 @@ export default function HomePage() {
   const [previewProduct, setPreviewProduct] = useState<SharedShelfProduct | null>(null)
   const [routinePeriod, setRoutinePeriod] = useState<"am" | "pm">("am")
   const [routineSheetOpen, setRoutineSheetOpen] = useState(false)
-  const { routine, changeStepProduct, addStep, removeStep } = useSharedRoutine()
-  const { products: shelfProducts } = useSharedShelf()
+  const { products: shelfProducts, shelfReady } = useSharedShelf()
+  const { routine, changeStepProduct, addStep, removeStep } = useSharedRoutineWithProducts(shelfProducts, shelfReady)
 
   const { displayName, avatarUrl } = useProfileHeader(user?.id, user?.email)
 
@@ -126,7 +126,7 @@ export default function HomePage() {
 
             {/* Compare Card — Forest */}
             <button
-              onClick={() => router.push("/products")}
+              onClick={() => router.push("/compare")}
               className="flex w-[145px] shrink-0 flex-col items-center justify-start rounded-2xl bg-[#697254]/10 px-4 pb-5 pt-5 text-center transition-shadow hover:shadow-md"
             >
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#697254]/20">
@@ -427,15 +427,21 @@ export default function HomePage() {
             <SheetHeader className="mb-5">
               <SheetTitle className="text-lg font-bold text-[#2D2D2D]">Routine Builder</SheetTitle>
             </SheetHeader>
-            <RoutineBuilderCard
-              period={routinePeriod}
-              steps={routine[routinePeriod]}
-              products={shelfProducts}
-              onPeriodChange={setRoutinePeriod}
-              onChangeStepProduct={(stepId, productId) => changeStepProduct(routinePeriod, stepId, productId)}
-              onAddStep={(type) => addStep(routinePeriod, type)}
-              onRemoveStep={(stepId) => removeStep(routinePeriod, stepId)}
-            />
+            {!shelfReady ? (
+              <p className="rounded-2xl bg-white/80 px-4 py-6 text-center text-[13px] leading-relaxed text-[#92735C]/80">
+                Loading your shelf…
+              </p>
+            ) : (
+              <RoutineBuilderCard
+                period={routinePeriod}
+                steps={routine[routinePeriod]}
+                products={shelfProducts}
+                onPeriodChange={setRoutinePeriod}
+                onChangeStepProduct={(stepId, productId) => changeStepProduct(routinePeriod, stepId, productId)}
+                onAddStep={(type) => addStep(routinePeriod, type)}
+                onRemoveStep={(stepId) => removeStep(routinePeriod, stepId)}
+              />
+            )}
           </SheetContent>
         </Sheet>
       </div>
