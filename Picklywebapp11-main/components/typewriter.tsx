@@ -48,7 +48,7 @@ export function Typewriter({ texts, speed = 100, delay = 2000, className = "" }:
   }, [currentText, currentTextIndex, isDeleting, isPaused, texts, speed, delay])
 
   return (
-    <div className={`font-inter font-light tracking-tight leading-tight ${className}`}>
+    <div className={`font-heading font-medium tracking-tight leading-tight ${className}`}>
       <span>{currentText}</span>
       <span className="animate-pulse text-white/80">|</span>
     </div>

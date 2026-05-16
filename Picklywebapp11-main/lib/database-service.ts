@@ -2,6 +2,12 @@ import { supabase } from "./supabase"
 import type { Database } from "./database.types"
 import type { UserProfile } from "@/types"
 import { retryWithBackoff } from "./utils"
+import {
+  newShelfProductToInsert,
+  userProductRowToShared,
+  type NewShelfProductFields,
+  type UserProductRow,
+} from "./user-product-mapper"
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"]
 type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"]
@@ -79,7 +85,16 @@ export class DatabaseService {
           skin_concerns: profile.skinConcerns || null,
           scalp_type: profile.scalpType || null,
           hair_conditions: profile.hairConditions || null,
+          hair_type: profile.hairType || null,
           goals: profile.goals || null,
+          vegan: profile.vegan ?? null,
+          categories: profile.categories || null,
+          shopping_style: profile.shoppingStyle || null,
+          purchase_priorities: profile.purchasePriorities || null,
+          locale: profile.locale || null,
+          display_name: profile.displayName?.trim() || null,
+          bio: profile.bio?.trim() || null,
+          avatar_url: profile.avatarUrl?.trim() || null,
           updated_at: new Date().toISOString(),
         },
         {
@@ -106,6 +121,9 @@ export class DatabaseService {
 
     // Convert database format to app format
     return {
+      displayName: data.display_name?.trim() || undefined,
+      bio: data.bio?.trim() || undefined,
+      avatarUrl: data.avatar_url?.trim() || undefined,
       age: data.age || undefined,
       gender: (data.gender as UserProfile["gender"]) || undefined,
       height: data.height || undefined,
@@ -117,7 +135,13 @@ export class DatabaseService {
       skinConcerns: data.skin_concerns || undefined,
       scalpType: (data.scalp_type as UserProfile["scalpType"]) || undefined,
       hairConditions: data.hair_conditions || undefined,
+      hairType: data.hair_type || undefined,
       goals: data.goals || undefined,
+      vegan: data.vegan ?? undefined,
+      categories: data.categories || undefined,
+      shoppingStyle: data.shopping_style || undefined,
+      purchasePriorities: data.purchase_priorities || undefined,
+      locale: data.locale === "tr" || data.locale === "en" ? data.locale : undefined,
     }
   }
 
@@ -138,7 +162,18 @@ export class DatabaseService {
           skin_concerns: profile.skinConcerns || null,
           scalp_type: profile.scalpType || null,
           hair_conditions: profile.hairConditions || null,
+          hair_type: profile.hairType || null,
           goals: profile.goals || null,
+          vegan: profile.vegan ?? null,
+          categories: profile.categories || null,
+          shopping_style: profile.shoppingStyle || null,
+          purchase_priorities: profile.purchasePriorities || null,
+          locale: profile.locale || null,
+          ...(profile.displayName !== undefined
+            ? { display_name: profile.displayName.trim() || null }
+            : {}),
+          ...(profile.bio !== undefined ? { bio: profile.bio.trim() || null } : {}),
+          ...(profile.avatarUrl !== undefined ? { avatar_url: profile.avatarUrl.trim() || null } : {}),
           updated_at: new Date().toISOString(),
         },
         {
@@ -150,6 +185,32 @@ export class DatabaseService {
 
     if (error) throw error
     return data
+  }
+
+  static async updateDisplayName(userId: string, displayName: string) {
+    const trimmed = displayName.trim().slice(0, 50)
+    if (!trimmed) throw new Error("Display name cannot be empty")
+
+    const { data: existing } = await supabase.from("user_profiles").select("user_id").eq("user_id", userId).maybeSingle()
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .update({ display_name: trimmed, updated_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .select("display_name")
+        .single()
+      if (error) throw error
+      return data.display_name
+    }
+
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .insert({ user_id: userId, display_name: trimmed, updated_at: new Date().toISOString() })
+      .select("display_name")
+      .single()
+    if (error) throw error
+    return data.display_name
   }
 
   // Scan history operations
@@ -193,6 +254,35 @@ export class DatabaseService {
 
   static async deleteScanFromHistory(scanId: string, userId: string) {
     const { error } = await supabase.from("scan_history").delete().eq("id", scanId).eq("user_id", userId)
+
+    if (error) throw error
+  }
+
+  /** Personal shelf (SSOT for prices); wallet UI derives from these rows. */
+  static async getUserProducts(userId: string): Promise<UserProductRow[]> {
+    const { data, error } = await supabase
+      .from("user_products")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return (data ?? []) as UserProductRow[]
+  }
+
+  static async insertUserProduct(userId: string, input: NewShelfProductFields) {
+    const { data, error } = await supabase
+      .from("user_products")
+      .insert(newShelfProductToInsert(userId, input))
+      .select()
+      .single()
+
+    if (error) throw error
+    return data as UserProductRow
+  }
+
+  static async deleteUserProduct(userId: string, productId: string) {
+    const { error } = await supabase.from("user_products").delete().eq("id", productId).eq("user_id", userId)
 
     if (error) throw error
   }

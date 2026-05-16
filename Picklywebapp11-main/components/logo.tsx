@@ -11,11 +11,11 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
     <Link href="/" className="flex items-center justify-center">
       <Image
-        src="/images/pickly.png"
+        src="/images/7e0b2a05-a68c-4167-b2ba-c937d73c7000.png"
         alt="Pickly Logo"
         width={sizes[size]}
         height={sizes[size]}
-        className="object-contain drop-shadow-[0_2px_8px_rgba(147,51,234,0.35)]"
+        className="object-contain rounded-full drop-shadow-[0_2px_8px_rgba(105,114,84,0.35)]"
       />
     </Link>
   )

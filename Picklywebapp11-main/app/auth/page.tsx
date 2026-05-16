@@ -6,7 +6,7 @@ import Link from "next/link"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle, CheckCircle } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle, CheckCircle } from "@/lib/icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,9 +15,9 @@ import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 import { Checkbox } from "@/components/ui/checkbox"
 
-const ACCENT = "#9333ea"
+const ACCENT = "#697254"
 const formCardTransition = { type: "tween", duration: 0.6, ease: [0.22, 1, 0.36, 1] }
-const AUTH_BG = "/images/Yellow%20and%20Black%20Vintage%20Short%20Film%20Motivation%20Mobile%20Video.png"
+const AUTH_BG = "/images/auth-bg-v2.png"
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -73,7 +73,7 @@ export default function SignInPage() {
         className="flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${AUTH_BG})` }}
       >
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#EFE5D8] border-t-transparent" />
       </div>
     )
   }
@@ -88,16 +88,16 @@ export default function SignInPage() {
       <div className="flex-1 min-h-[28vh] sm:min-h-[32vh]" />
 
       <motion.div
-        className="relative z-10 flex-1 rounded-t-3xl bg-white shadow-[0_-8px_32px_rgba(0,0,0,0.08)] px-6 pt-8 pb-10 sm:px-8"
+        className="relative z-10 flex-1 rounded-t-3xl bg-[#EFE5D8] shadow-[0_-8px_32px_rgba(0,0,0,0.08)] px-6 pt-8 pb-10 sm:px-8"
         initial={{ opacity: 0, y: 36 }}
         animate={{ opacity: 1, y: 0 }}
         transition={formCardTransition}
       >
         <div className="mx-auto max-w-md">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900" style={{ color: ACCENT }}>
+          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: ACCENT }}>
             Welcome!
           </h1>
-          <p className="mt-1 text-gray-600">
+          <p className="mt-1 text-[#92735C]">
             Don&apos;t have an account?{" "}
             <Link
               href="/signup"
@@ -117,7 +117,7 @@ export default function SignInPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="email" className="text-sm font-medium text-[#697254]">
                 Email Address
               </Label>
               <div className="relative">
@@ -128,7 +128,7 @@ export default function SignInPage() {
                   autoCapitalize="none"
                   autoComplete="email"
                   disabled={isLoading}
-                  className="h-12 rounded-xl border-gray-200 bg-gray-50/50 focus:border-[#9333ea] focus:ring-[#9333ea]/20"
+                  className="h-12 rounded-xl border-[#B69C85]/30 bg-white/60 focus:border-[#697254] focus:ring-[#697254]/20"
                   {...register("email")}
                 />
                 {errors.email && (
@@ -144,7 +144,7 @@ export default function SignInPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="password" className="text-sm font-medium text-[#697254]">
                 Password
               </Label>
               <div className="relative">
@@ -153,13 +153,13 @@ export default function SignInPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   disabled={isLoading}
-                  className="h-12 rounded-xl border-gray-200 bg-gray-50/50 focus:border-[#9333ea] focus:ring-[#9333ea]/20 pr-10"
+                  className="h-12 rounded-xl border-[#B69C85]/30 bg-white/60 focus:border-[#697254] focus:ring-[#697254]/20 pr-10"
                   {...register("password")}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#92735C] hover:text-[#697254]"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -174,9 +174,9 @@ export default function SignInPage() {
                 <Checkbox
                   checked={rememberMe}
                   onCheckedChange={(v) => setRememberMe(!!v)}
-                  className="border-gray-300 data-[state=checked]:bg-[#9333ea] data-[state=checked]:border-[#9333ea]"
+                  className="border-[#B69C85]/50 data-[state=checked]:bg-[#697254] data-[state=checked]:border-[#697254]"
                 />
-                <span className="text-sm text-gray-600">Remember me</span>
+                <span className="text-sm text-[#92735C]">Remember me</span>
               </label>
               <Link
                 href="/auth/forgot-password"
@@ -189,13 +189,13 @@ export default function SignInPage() {
 
             <Button
               type="submit"
-              className="w-full h-12 text-base font-semibold rounded-xl text-white hover:opacity-95 transition-opacity"
+              className="w-full h-12 text-base font-semibold rounded-xl text-[#EFE5D8] hover:opacity-95 transition-opacity"
               style={{ backgroundColor: ACCENT }}
               disabled={isLoading}
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">
-                  <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="h-5 w-5 border-2 border-[#EFE5D8] border-t-transparent rounded-full animate-spin" />
                   Signing in...
                 </span>
               ) : (

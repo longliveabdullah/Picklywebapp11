@@ -1,17 +1,10 @@
 import type React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
-import { DM_Sans } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { BottomNavigation } from "@/components/bottom-navigation"
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-dm-sans",
-  display: "swap",
-})
+import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: "Pickly - Personalized Product Ratings",
@@ -30,12 +23,17 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={dmSans.variable}>
-      <body className="font-dm-sans">
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="anonymous" />
+      </head>
+      <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light">
           <AuthProvider>
             {children}
             <BottomNavigation />
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </body>

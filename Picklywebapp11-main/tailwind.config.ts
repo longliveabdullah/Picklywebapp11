@@ -20,8 +20,11 @@ const config = {
     },
     extend: {
       fontFamily: {
-        "dm-sans": ["var(--font-dm-sans)", "sans-serif"],
-        inter: ["var(--font-dm-sans)", "sans-serif"],
+        sans: ["General Sans", "system-ui", "sans-serif"],
+        heading: ["Satoshi", "system-ui", "sans-serif"],
+        /* legacy aliases — point to new stack */
+        "dm-sans": ["General Sans", "system-ui", "sans-serif"],
+        inter: ["General Sans", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

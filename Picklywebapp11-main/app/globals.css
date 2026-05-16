@@ -1,9 +1,13 @@
+@import url("https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=general-sans@400,500,600,700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    --font-heading: "Satoshi", system-ui, sans-serif;
+    --font-body: "General Sans", system-ui, sans-serif;
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
@@ -74,7 +78,20 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading;
+    letter-spacing: -0.025em;
   }
 }
 
@@ -105,12 +122,12 @@
   }
 }
 
-/* Custom typewriter styles with system fonts */
+/* Hero / splash typewriter — heading voice, tight rhythm */
 .typewriter-text {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
-  font-weight: 300;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
 }
 
 /* Custom animations */
@@ -302,10 +319,75 @@
   box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
 }
 
-/* Landing page wave dividers - profile purple (#9333ea), smooth wave above footer */
+@keyframes loadingOrbFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(10px, -16px, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes loadingCardShimmer {
+  0% {
+    transform: translateX(-130%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.28;
+  }
+  100% {
+    transform: translateX(130%);
+    opacity: 0;
+  }
+}
+
+@keyframes scoreRevealSweep {
+  0% {
+    transform: translateX(-135%) skewX(-16deg);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.42;
+  }
+  100% {
+    transform: translateX(220%) skewX(-16deg);
+    opacity: 0;
+  }
+}
+
+.loading-orb {
+  animation: loadingOrbFloat 8s ease-in-out infinite;
+}
+
+.loading-card-shimmer {
+  position: relative;
+}
+
+.loading-card-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), transparent);
+  transform: translateX(-130%);
+  animation: loadingCardShimmer 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.score-reveal-sweep {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.58), transparent);
+  transform: translateX(-135%) skewX(-16deg);
+  animation: scoreRevealSweep 1.15s ease-out 1;
+}
+
+/* Landing page wave dividers - forest green (#697254), smooth wave above footer */
 .wave-container {
   height: 40vh;
-  background-color: white;
+  background-color: #EFE5D8;
   position: relative;
   overflow: hidden;
 }
@@ -319,7 +401,7 @@
   min-width: 100%;
   height: 120px;
   transform: translateX(-50%);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120' preserveAspectRatio='none'><path fill='%239333ea' d='M0,64 C360,160 720,0 1080,64 C1260,96 1380,96 1440,64 L1440,120 L0,120 Z'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120' preserveAspectRatio='none'><path fill='%23697254' d='M0,64 C360,160 720,0 1080,64 C1260,96 1380,96 1440,64 L1440,120 L0,120 Z'/></svg>");
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: 100% 100%;
@@ -341,7 +423,7 @@
   background-size: cover;
   background-repeat: no-repeat;
   background-position: 0 bottom;
-  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 1200 134' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M0 1C19.5523 3 32.2291 5 51.5 9C104.5 19 200 43 300 65C400 88 500 111 600 102C700 93 800 53 900 30C987.526 5 1085.36 -1 1150 0C1169.54 -1 1180.49 0 1200 1V134H1150C1100 134 1000 134 900 134C800 134 700 134 600 134C500 134 400 134 300 134C200 134 100 134 50 134H0V1.98128Z' fill='%23ffffff'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 1200 134' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M0 1C19.5523 3 32.2291 5 51.5 9C104.5 19 200 43 300 65C400 88 500 111 600 102C700 93 800 53 900 30C987.526 5 1085.36 -1 1150 0C1169.54 -1 1180.49 0 1200 1V134H1150C1100 134 1000 134 900 134C800 134 700 134 600 134C500 134 400 134 300 134C200 134 100 134 50 134H0V1.98128Z' fill='%23EFE5D8'/></svg>");
 }
 
 @media (max-width: 850px) {

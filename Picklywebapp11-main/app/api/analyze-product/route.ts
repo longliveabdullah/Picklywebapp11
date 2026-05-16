@@ -1,281 +1,289 @@
+import { randomUUID } from "crypto"
 import { type NextRequest, NextResponse } from "next/server"
-import OpenAI from "openai"
+import { createClient } from "@/lib/supabase/server"
+import { CONTEXT_CAPS, PICKLY_PROMPT_VERSION, picklyModelId } from "@/lib/pickly-analyze/constants"
+import {
+  formatFutureBuysBlock,
+  formatPastDecisionsBlock,
+  formatProfileBlock,
+  formatRecentScansBlock,
+  formatRoutineBlock,
+  formatShelfBlock,
+  type DbProfileShape,
+} from "@/lib/pickly-analyze/context-blocks"
+import { fallbackAnalyzeBody } from "@/lib/pickly-analyze/fallback-body"
+import { createOpenRouterClient, parseBodyFromContent, runRepairJson, runVisionAnalyze } from "@/lib/pickly-analyze/run-model"
+import { shouldPrefetchResearchForShelf } from "@/lib/pickly-analyze/shelf-escalation"
+import {
+  AnalyzeProductRequestSchema,
+  PicklyApiEnvelopeSchema,
+  attachAnalyzeMode,
+  type AnalyzeRequestMode,
+} from "@/lib/pickly-analyze/schema"
+import { applyAllergenOverrideBody, findTriggeredAllergens } from "@/lib/pickly-analyze/safety"
+import { trimToPicklyNow } from "@/lib/pickly-analyze/trim-result"
+import { resolveDisplayName } from "@/lib/display-name-resolve"
+import type { Database, Json } from "@/lib/database.types"
 
-// Initialize OpenAI client with OpenRouter
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
-  defaultHeaders: {
-    "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-    "X-Title": "Pickly - AI Product Analyzer",
-  },
-})
+export const maxDuration = 60
 
-interface AnalyzeRequest {
-  imageBase64: string
-  userProfile?: {
-    age?: number
-    gender?: string
-    skinType?: string
-    allergies?: string[]
-    hasDiabetes?: boolean
+type ScanHistoryInsert = Database["public"]["Tables"]["scan_history"]["Insert"]
+
+function coerceDbProfile(row: Record<string, unknown> | null): DbProfileShape | null {
+  if (!row) return null
+
+  const arr = (value: unknown): string[] | null =>
+    Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : null
+
+  return {
+    age: typeof row.age === "number" ? row.age : null,
+    gender: typeof row.gender === "string" ? row.gender : null,
+    skin_type: typeof row.skin_type === "string" ? row.skin_type : null,
+    skin_tone: typeof row.skin_tone === "string" ? row.skin_tone : null,
+    skin_concerns: arr(row.skin_concerns),
+    scalp_type: typeof row.scalp_type === "string" ? row.scalp_type : null,
+    hair_conditions: arr(row.hair_conditions),
+    hair_type: typeof row.hair_type === "string" ? row.hair_type : null,
+    goals: arr(row.goals),
+    allergies: arr(row.allergies),
+    has_diabetes: Boolean(row.has_diabetes),
+    vegan: typeof row.vegan === "boolean" ? row.vegan : null,
+    categories: arr(row.categories),
+    shopping_style: typeof row.shopping_style === "string" ? row.shopping_style : null,
+    purchase_priorities: arr(row.purchase_priorities),
+    locale: typeof row.locale === "string" ? row.locale : null,
   }
-}
-
-interface AnalyzeResponse {
-  rating: number
-  explanation: string
-  recommendations: string[]
-  productName?: string
-  ingredients?: string[]
-  healthScore?: number
-  suitabilityScore?: number
-  reasonsToBuy?: string[]
-  reasonsToAvoid?: string[]
 }
 
 export async function POST(request: NextRequest) {
-  console.log("🔍 Starting product analysis...")
+  const request_id = randomUUID()
 
   try {
-    const body: AnalyzeRequest = await request.json()
-    const { imageBase64, userProfile } = body
+    const jsonUnknown: unknown = await request.json()
+    const parsedReq = AnalyzeProductRequestSchema.safeParse(jsonUnknown)
 
-    if (!imageBase64) {
-      return NextResponse.json({ error: "Missing imageBase64" }, { status: 400 })
+    if (!parsedReq.success) {
+      return NextResponse.json({ error: "Invalid request body", details: parsedReq.error.flatten() }, { status: 400 })
     }
 
-    // Build personalized context
-    let userProfileInfo = "No profile information available - providing general product analysis."
+    const body = parsedReq.data
 
-    if (userProfile) {
-      const parts = []
-      if (userProfile.age) parts.push(`Age: ${userProfile.age} years old`)
-      if (userProfile.gender) parts.push(`Gender: ${userProfile.gender}`)
-      if (userProfile.skinType) parts.push(`Skin Type: ${userProfile.skinType}`)
-      if (userProfile.hasDiabetes !== undefined) parts.push(`Diabetes: ${userProfile.hasDiabetes ? "Yes" : "No"}`)
-      if (userProfile.allergies && userProfile.allergies.length > 0) {
-        parts.push(`Allergies: ${userProfile.allergies.join(", ")}`)
-      }
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-      if (parts.length > 0) {
-        userProfileInfo = `USER PROFILE:
-${parts.join("\n")}`
-      }
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized", request_id }, { status: 401 })
     }
 
-    const prompt = `You are picklyai, a product analyzer that helps users understand the health and quality of products before buying them. Always provide the following:
-
-Brand name
-Category
-A rating out of 10 (explained below)
-A detailed list of Pros and Cons (2–4 detailed bullet points each)
-The rating reflects product quality, effect on human health, and fit for the user's profile.
-
-Rating logic:
-Start at 10/10.
-Subtract points for any negative health impact, low quality, poor ingredients, or mismatch with user needs.
-If the product is unidentified or lacks enough data, rate it 0/10 and explain that it couldn’t be analyzed.
-Clearly explain the reason for the final score.
-
-Pros and cons and summary :
-Write clearly and informatively.
-Do not just list ingredients — explain how they help or harm the user.
-Use simple language that a non-expert can understand.
-If the product contains ingredients commonly used in low-quality or cheap formulations (e.g., parabens, sulfates, artificial dyes, excessive preservatives, etc.), mention this in the cons and explain that these are often used in poor-quality products.
-
-${userProfileInfo}
-
-IMPORTANT SAFETY RULES:
-- If the user has allergies and the product contains these allergens, rate it 0/10 and clearly state it is DANGEROUS for the user.
-- If the user has diabetes and the product has high sugar content, rate it 0/10 and explain that it is DANGEROUS for diabetic users.
-- If the product contains ingredients the user wants to avoid, lower the rating significantly and highlight this in the cons.
-- For skincare products, consider the user’s skin type. If the product is unsuitable, reduce the score and explain why.
-- For hair products, consider the user’s scalp type. If it's not appropriate, reduce the score and explain why.
-
-Always prioritize the user’s health and safety above all.
-
-Always respond in JSON format with the following structure: { "brandName": string, "category": string, "rating": number, "pros": string[], "cons": string[], "summary": string }`
-
-    let analysisResult: AnalyzeResponse
-
-    // Try OpenRouter API first
-    if (process.env.OPENAI_API_KEY) {
-      try {
-        console.log("🤖 Calling OpenRouter API...")
-
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4.1-mini",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: prompt,
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:image/jpeg;base64,${imageBase64}`,
-                  },
-                },
-              ],
-            },
-          ],
-          max_tokens: 1500,
-          temperature: 0.3,
-        })
-
-        const content = completion.choices[0]?.message?.content
-        if (!content) {
-          throw new Error("No content in OpenRouter response")
-        }
-
-        console.log("📝 Raw AI response:", content.substring(0, 200) + "...")
-
-        // Parse JSON response
-        try {
-          const cleanContent = content.trim().replace(/```json\n?|\n?```/g, "")
-          const parsed = JSON.parse(cleanContent)
-
-          // Transform the new format to match existing interface
-          analysisResult = {
-            rating: Math.max(0, Math.min(10, Math.round(parsed.rating || 0))),
-            explanation: parsed.summary || "Analysis completed successfully.",
-            recommendations:
-              Array.isArray(parsed.pros) && parsed.pros.length > 0 ? parsed.pros.slice(0, 3) : ["Use as directed"],
-            productName: parsed.productName || parsed.brandName || "Unknown Product",
-            healthScore: parsed.productDetected ? Math.max(1, Math.min(100, parsed.rating * 10)) : 0,
-            suitabilityScore: parsed.confidence ? Math.max(1, Math.min(100, parsed.confidence)) : 0,
-            ingredients: [], // Keep for compatibility
-            reasonsToBuy: parsed.pros || [],
-            reasonsToAvoid: parsed.cons || [],
-          }
-
-          console.log("✅ Successfully parsed OpenRouter response:", {
-            productDetected: parsed.productDetected,
-            productName: parsed.productName,
-            rating: parsed.rating,
-            brand: parsed.productInfo?.brand,
-          })
-        } catch (parseError) {
-          console.error("❌ Failed to parse OpenRouter JSON response:", parseError)
-          throw new Error("Invalid JSON response from AI service")
-        }
-      } catch (apiError) {
-        console.error("❌ OpenRouter API error:", apiError)
-        console.log("🔄 Falling back to mock response...")
-        analysisResult = generateMockResponse(userProfile)
-      }
-    } else {
-      console.log("⚠️ No OpenAI API key found, using mock response")
-      analysisResult = generateMockResponse(userProfile)
+    const hasApiKey = Boolean(process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY)
+    if (!hasApiKey) {
+      return NextResponse.json({ error: "Server missing OPENAI_API_KEY / OPENROUTER_API_KEY", request_id }, { status: 503 })
     }
 
-    console.log("🎉 Analysis completed successfully:", {
-      rating: analysisResult.rating,
-      productName: analysisResult.productName,
-      hasRecommendations: analysisResult.recommendations.length > 0,
+    const { data: profileRaw } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).maybeSingle()
+
+    const profile = coerceDbProfile((profileRaw ?? null) as Record<string, unknown> | null)
+
+    const language: "en" | "tr" =
+      body.locale === "tr" || profile?.locale === "tr" ? "tr" : body.locale === "en" ? "en" : "en"
+
+    const profileRow = profileRaw as Record<string, unknown> | null
+    const displayName = resolveDisplayName({
+      profileDisplayName:
+        typeof profileRow?.display_name === "string" ? profileRow.display_name : null,
+      metadata: user.user_metadata as Record<string, unknown>,
+      email: user.email,
+      userId: user.id,
     })
 
-    return NextResponse.json(analysisResult)
-  } catch (error) {
-    console.error("❌ Analyze API error:", error)
+    const shelfCompact = body.client_context?.shelf_compact?.slice(0, CONTEXT_CAPS.shelfMax) ?? []
 
+    const profileBlock = formatProfileBlock(profile)
+    const shelfBlock = formatShelfBlock({
+      ...body,
+      client_context: { ...body.client_context, shelf_compact: shelfCompact },
+    })
+    const routineBlock = formatRoutineBlock(body)
+    const futureBuysBlock = formatFutureBuysBlock(body)
+
+    const { data: scanRows } = await supabase
+      .from("scan_history")
+      .select("product_name, rating, explanation, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_CAPS.scansMax)
+
+    const scansBlock = formatRecentScansBlock(scanRows ?? [])
+
+    let pastRows: Array<{ category: string; normalized_name: string; event_type: string; created_at: string }> = []
+    const pastQuery = await supabase
+      .from("user_scan_decisions")
+      .select("category, normalized_name, event_type, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_CAPS.pastDecisionsMax)
+
+    if (!pastQuery.error && pastQuery.data) {
+      pastRows = pastQuery.data as typeof pastRows
+    }
+
+    const pastDecisionsBlock = formatPastDecisionsBlock(pastRows)
+
+    const promptDepth: AnalyzeRequestMode =
+      body.mode === "research" ||
+      Boolean(profile?.allergies?.length) ||
+      shouldPrefetchResearchForShelf(body.product_type_hint ?? null, shelfCompact)
+        ? "research"
+        : "in_store"
+
+    const maxTokens = promptDepth === "research" ? 2200 : 950
+
+    const openai = createOpenRouterClient()
+
+    let rawContent = await runVisionAnalyze(openai, {
+      imageBase64: body.imageBase64,
+      depth: promptDepth,
+      language,
+      displayName,
+      profileBlock,
+      shelfBlock,
+      routineBlock,
+      scansBlock,
+      futureBuysBlock,
+      pastDecisionsBlock,
+      maxTokens,
+    })
+
+    let validation_result: "ok" | "repaired" | "fallback" = "ok"
+    let parsedBody = parseBodyFromContent(rawContent)
+
+    if (!parsedBody) {
+      const repairedRaw = rawContent ? await runRepairJson(openai, rawContent) : null
+      parsedBody = parseBodyFromContent(repairedRaw)
+      validation_result = parsedBody ? "repaired" : "fallback"
+    }
+
+    if (!parsedBody) {
+      parsedBody = fallbackAnalyzeBody(language)
+      validation_result = "fallback"
+    }
+
+    const ingredientHaystack = [
+      ...(parsedBody.normalized_ingredient_tokens ?? []),
+      parsedBody.ingredient_highlights.map((item) => item.name).join(", "),
+      parsedBody.flagged_ingredients.map((item) => item.name).join(", "),
+    ].join(" | ")
+
+    const allergyHits = findTriggeredAllergens(profile?.allergies ?? undefined, parsedBody.normalized_ingredient_tokens, ingredientHaystack)
+
+    const workingBody = applyAllergenOverrideBody(parsedBody, allergyHits)
+
+    const needsFullDepth =
+      body.mode === "research" ||
+      allergyHits.length > 0 ||
+      workingBody.score <= 3 ||
+      workingBody.verdict === "Dangerous" ||
+      Boolean(workingBody.shelf_match?.found)
+
+    let finalResult = attachAnalyzeMode(workingBody, needsFullDepth ? "research" : "in_store")
+
+    if (!needsFullDepth && body.mode === "in_store") {
+      finalResult = trimToPicklyNow(finalResult)
+    }
+
+    const envelopeParsed = PicklyApiEnvelopeSchema.safeParse({
+      request_id,
+      prompt_version: PICKLY_PROMPT_VERSION,
+      model_id: picklyModelId(),
+      validation_result,
+      context_stats: {
+        shelf_items_sent: shelfCompact.length,
+        scans_sent: scanRows?.length ?? 0,
+        past_decisions_sent: pastRows.length,
+      },
+      result: finalResult,
+    })
+
+    let envelope = envelopeParsed.success ? envelopeParsed.data : null
+
+    if (!envelope) {
+      const fallbackBodyResolved = fallbackAnalyzeBody(language)
+      const trimmedFallback =
+        body.mode === "in_store"
+          ? trimToPicklyNow(attachAnalyzeMode(fallbackBodyResolved, "in_store"))
+          : attachAnalyzeMode(fallbackBodyResolved, "research")
+
+      envelope = PicklyApiEnvelopeSchema.parse({
+        request_id,
+        prompt_version: PICKLY_PROMPT_VERSION,
+        model_id: picklyModelId(),
+        validation_result: "fallback",
+        context_stats: {
+          shelf_items_sent: shelfCompact.length,
+          scans_sent: scanRows?.length ?? 0,
+          past_decisions_sent: pastRows.length,
+        },
+        result: trimmedFallback,
+      })
+    }
+
+    const insertExtended: ScanHistoryInsert = {
+      user_id: user.id,
+      image_url: "pickly-camera-scan",
+      product_name: envelope.result.productName,
+      rating: envelope.result.score,
+      explanation: envelope.result.recommended_action || envelope.result.personalized_why[0] || "",
+      recommendations: envelope.result.quick_prompts.length ? envelope.result.quick_prompts : envelope.result.personalized_why,
+      user_profile_snapshot: profile ?? {},
+      analysis_json: envelope.result as Json,
+      analyze_mode: body.mode,
+      effective_mode: envelope.result.mode,
+      product_brand: envelope.result.brand,
+      product_category: envelope.result.category,
+    }
+
+    const insertMinimal: ScanHistoryInsert = {
+      user_id: user.id,
+      image_url: "pickly-camera-scan",
+      product_name: envelope.result.productName,
+      rating: envelope.result.score,
+      explanation: envelope.result.recommended_action || envelope.result.personalized_why[0] || "",
+      recommendations: envelope.result.quick_prompts.length ? envelope.result.quick_prompts : envelope.result.personalized_why,
+      user_profile_snapshot: profile ?? {},
+    }
+
+    const extendedTry = await supabase.from("scan_history").insert(insertExtended)
+    if (extendedTry.error) {
+      console.warn("[analyze-product] extended scan_history insert skipped:", extendedTry.error.message)
+      const legacyTry = await supabase.from("scan_history").insert(insertMinimal)
+      if (legacyTry.error) {
+        console.warn("[analyze-product] legacy scan_history insert failed:", legacyTry.error.message)
+      }
+    }
+
+    return NextResponse.json(envelope)
+  } catch (error) {
+    console.error("[analyze-product] fatal:", error)
     return NextResponse.json(
       {
         error: "Failed to analyze product",
-        details: error instanceof Error ? error.message : "Unknown error occurred",
-        timestamp: new Date().toISOString(),
+        details: error instanceof Error ? error.message : "unknown",
+        request_id,
       },
       { status: 500 },
     )
   }
 }
 
-// GET endpoint for testing
 export async function GET() {
-  console.log("🧪 Testing analyze API endpoint...")
-
-  try {
-    return NextResponse.json({
-      status: "Analyze API is running",
-      hasOpenRouterKey: !!process.env.OPENAI_API_KEY,
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-    })
-  } catch (error) {
-    console.error("❌ GET endpoint error:", error)
-    return NextResponse.json(
-      {
-        error: "API test failed",
-        details: error instanceof Error ? error.message : "Unknown error",
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 },
-    )
-  }
-}
-
-function generateMockResponse(userProfile?: any): AnalyzeResponse {
-  const rating = Math.floor(Math.random() * 10) + 1
-
-  let explanation = "Based on our analysis, this product "
-  if (rating >= 8) {
-    explanation += "appears to be an excellent choice with high quality ingredients and good safety profile."
-  } else if (rating >= 5) {
-    explanation += "seems to be a decent option with some considerations to keep in mind."
-  } else {
-    explanation += "may not be the best choice due to potential concerns with ingredients or suitability."
-  }
-
-  if (userProfile?.skinType) {
-    explanation += ` For your ${userProfile.skinType} skin type, `
-    if (userProfile.skinType === "sensitive") {
-      explanation += "we recommend patch testing before full use."
-    } else {
-      explanation += "this product should work well with proper application."
-    }
-  }
-
-  if (userProfile?.allergies && userProfile.allergies.length > 0) {
-    explanation += ` We've considered your known allergies (${userProfile.allergies.join(", ")}) in this assessment.`
-  }
-
-  const recommendations = [
-    "Read all ingredient labels carefully",
-    "Use as directed on packaging",
-    "Store in a cool, dry place",
-  ]
-
-  if (userProfile?.skinType === "sensitive") {
-    recommendations.push("Perform a patch test before first use")
-  }
-
-  if (rating < 5) {
-    recommendations.push("Consider alternative products better suited to your needs")
-  }
-
-  const reasonsToBuy = ["Affordable", "Widely available"]
-  const reasonsToAvoid = ["Contains artificial fragrances"]
-
-  if (rating > 7) {
-    reasonsToBuy.push("High-quality ingredients")
-  }
-  if (rating < 4) {
-    reasonsToAvoid.push("May not be suitable for sensitive skin")
-  }
-
-  return {
-    rating,
-    explanation,
-    recommendations,
-    productName: "Analyzed Product",
-    healthScore: Math.floor(Math.random() * 100) + 1,
-    suitabilityScore: rating * 10,
-    ingredients: ["Natural extracts", "Preservatives", "Active compounds"],
-    reasonsToBuy,
-    reasonsToAvoid,
-  }
+  return NextResponse.json({
+    status: "Analyze API (Pickly orchestrator)",
+    prompt_version: PICKLY_PROMPT_VERSION,
+    hasOpenRouterKey: Boolean(process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY),
+    model_id_default: picklyModelId(),
+    timestamp: new Date().toISOString(),
+  })
 }

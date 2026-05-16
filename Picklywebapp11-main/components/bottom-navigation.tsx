@@ -1,122 +1,100 @@
 "use client"
 
-import React from "react"
-
+import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Camera, User, Crown, History } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
+import {
+  NavCamera,
+  NavCommunity,
+  NavHistory,
+  NavHome,
+  NavProfile,
+} from "@/lib/icons"
+
+const ACTIVE_COLOR = "#697254"
+const INACTIVE_COLOR = "rgba(105,114,84,0.45)"
+
+const navItems = [
+  { label: "Home", href: "/home", Icon: NavHome },
+  { label: "Circles", href: "/community", Icon: NavCommunity },
+  { label: "Scan", href: "/camera", isCenter: true, Icon: NavCamera },
+  { label: "History", href: "/history", Icon: NavHistory },
+  { label: "Profile", href: "/profile", Icon: NavProfile },
+]
 
 export function BottomNavigation() {
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
+  const [mounted, setMounted] = useState(false)
 
-  // Don't show bottom navigation on auth pages and onboarding
-  if (!user || pathname === "/" || pathname === "/splash" || pathname === "/auth" || pathname === "/signup" || pathname.startsWith("/onboarding")) {
-    return null
-  }
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-  const handleCameraClick = () => {
-    router.push("/camera")
-  }
+  if (!mounted) return null
 
-  const navItems = [
-    {
-      icon: Home,
-      label: "Home",
-      href: "/home",
-      color: "bg-green-500",
-      isActive: pathname === "/home",
-    },
-    {
-      icon: History,
-      label: "History",
-      href: "/history",
-      color: "bg-gray-100 border border-gray-300",
-      textColor: "text-gray-600",
-      isActive: pathname === "/history",
-    },
-    {
-      icon: Crown,
-      label: "Premium",
-      href: "/premium",
-      color: "bg-yellow-500",
-      isActive: pathname === "/premium",
-    },
-    {
-      icon: User,
-      label: "Profile",
-      href: "/profile",
-      color: "bg-blue-500",
-      isActive: pathname === "/profile",
-    },
-  ]
+  const hidden =
+    !user ||
+    pathname === "/" ||
+    pathname === "/splash" ||
+    pathname === "/auth" ||
+    pathname.startsWith("/auth/") ||
+    pathname === "/signup" ||
+    pathname.startsWith("/onboarding")
+
+  if (hidden) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-transparent safe-area-pb">
-      <div className="flex items-end justify-center px-6 py-4">
-        <div className="flex items-end justify-between w-full max-w-xs">
-          {/* Home Button */}
-          <button
-            onClick={() => router.push(navItems[0].href)}
-            className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200",
-              navItems[0].color,
-              navItems[0].isActive && "ring-4 ring-green-200",
-            )}
-          >
-            {React.createElement(navItems[0].icon, { className: "h-6 w-6 text-white" })}
-          </button>
+    <div className="fixed bottom-0 left-0 right-0 z-50 safe-area-pb">
+      <div className="border-t border-white/20 bg-white/60 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-sm items-end justify-around px-2 pb-2 pt-1">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href
+            const { Icon } = item
 
-          {/* History Button */}
-          <button
-            onClick={() => router.push(navItems[1].href)}
-            className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200",
-              navItems[1].color,
-              navItems[1].isActive && "ring-4 ring-gray-200",
-            )}
-          >
-            {React.createElement(navItems[1].icon, {
-              className: cn("h-6 w-6", navItems[1].textColor || "text-white"),
-            })}
-          </button>
+            if ("isCenter" in item && item.isCenter) {
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => router.push(item.href)}
+                  className="flex -translate-y-3 flex-col items-center"
+                >
+                  <div
+                    className={cn(
+                      "flex h-14 w-14 items-center justify-center rounded-full bg-[#697254] shadow-lg",
+                      isActive && "ring-2 ring-[#697254]/30 ring-offset-2",
+                    )}
+                  >
+                    <Icon size={26} color="white" strokeWidth={2} />
+                  </div>
+                </button>
+              )
+            }
 
-          {/* Camera Button - Larger and Elevated */}
-          <button
-            onClick={handleCameraClick}
-            className={cn(
-              "flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-pickly-pink to-pickly-purple shadow-lg transition-all duration-200 hover:shadow-xl transform -translate-y-2",
-              pathname === "/camera" && "ring-4 ring-purple-200",
-            )}
-          >
-            <Camera className="h-8 w-8 text-white" />
-          </button>
-
-          {/* Premium Button */}
-          <button
-            onClick={() => router.push(navItems[2].href)}
-            className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200",
-              navItems[2].color,
-              navItems[2].isActive && "ring-4 ring-yellow-200",
-            )}
-          >
-            {React.createElement(navItems[2].icon, { className: "h-6 w-6 text-white" })}
-          </button>
-
-          {/* Profile Button */}
-          <button
-            onClick={() => router.push(navItems[3].href)}
-            className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200",
-              navItems[3].color,
-              navItems[3].isActive && "ring-4 ring-blue-200",
-            )}
-          >
-            {React.createElement(navItems[3].icon, { className: "h-6 w-6 text-white" })}
-          </button>
+            return (
+              <button
+                key={item.href}
+                onClick={() => router.push(item.href)}
+                className="flex min-w-[56px] flex-col items-center gap-0.5 py-1.5"
+              >
+                <Icon
+                  size={22}
+                  color={isActive ? ACTIVE_COLOR : INACTIVE_COLOR}
+                  strokeWidth={1.8}
+                />
+                <span
+                  className={cn(
+                    "text-[10px] font-medium",
+                    isActive ? "text-[#697254]" : "text-[#697254]/45",
+                  )}
+                >
+                  {item.label}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
