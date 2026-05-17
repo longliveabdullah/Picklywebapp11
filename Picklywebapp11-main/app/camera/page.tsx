@@ -3,6 +3,8 @@
 import type React from "react"
 import { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { Trans, useTranslation } from "react-i18next"
+import { getAppLocale } from "@/lib/i18n"
 import Image from "next/image"
 import { AnimatePresence, motion } from "framer-motion"
 import {
@@ -52,18 +54,12 @@ function isPicklyEnvelope(payload: unknown): payload is PicklyApiEnvelope {
   return typeof candidate.request_id === "string" && !!result && typeof result === "object"
 }
 
-function clientLocale(): "en" | "tr" {
-  if (typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("tr")) {
-    return "tr"
-  }
-  return "en"
-}
-
 function shelfCompactPayload(products: SharedShelfProduct[]) {
   return products.slice(0, 8).map((product) => ({
     product_name: product.product_name,
     brand: product.brand,
     category: product.category,
+    routine_type: product.routine_type ?? null,
   }))
 }
 
@@ -225,6 +221,7 @@ interface ChatMessage {
 
 export default function CameraPage() {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const router = useRouter()
   const { toast } = useToast()
   const { products: shelfProducts, addProduct } = useSharedShelf()
@@ -237,7 +234,8 @@ export default function CameraPage() {
   const [loadingScans, setLoadingScans] = useState(true)
   const [showEvidence, setShowEvidence] = useState(false)
   const [showScoreReveal, setShowScoreReveal] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const lastScanBase64Ref = useRef<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -506,7 +504,7 @@ export default function CameraPage() {
           body: JSON.stringify({
             imageBase64: base64,
             mode: "in_store",
-            locale: clientLocale(),
+            locale: getAppLocale(),
             client_context: {
               shelf_compact: shelfCompactPayload(shelfProducts),
               routine_compact: routineCompactPayload(routine, shelfProducts),
@@ -637,7 +635,7 @@ export default function CameraPage() {
     event.target.value = ""
   }
 
-  const handleUploadClick = () => {
+  const openImagePicker = (input: HTMLInputElement | null) => {
     if (!user) {
       toast({
         title: "Authentication Error",
@@ -655,8 +653,11 @@ export default function CameraPage() {
       })
       return
     }
-    fileInputRef.current?.click()
+    input?.click()
   }
+
+  const handleCameraClick = () => openImagePicker(cameraInputRef.current)
+  const handleGalleryClick = () => openImagePicker(galleryInputRef.current)
 
   const resetScan = () => {
     setSelectedImage(null)
@@ -802,9 +803,9 @@ export default function CameraPage() {
                 className="overflow-hidden rounded-3xl border border-white/20 bg-white/15 p-6 backdrop-blur-xl shadow-2xl"
               >
                 <div className="mb-5 text-center">
-                  <h1 className="text-[22px] font-bold text-white">Scan with Pickly</h1>
+                  <h1 className="text-[22px] font-bold text-white">{t("camera.title")}</h1>
                   <p className="mt-1.5 text-[13px] leading-relaxed text-white/70">
-                    Point at any product label and get a decision that feels like advice, not a lab report.
+                    {t("camera.subtitle")}
                   </p>
                 </div>
 
@@ -818,20 +819,24 @@ export default function CameraPage() {
                     <Clock className="h-4 w-4 text-white" />
                   </div>
                   {loadingScans ? (
-                    <p className="text-sm font-medium text-white/80">Loading...</p>
+                    <p className="text-sm font-medium text-white/80">{t("common.loading")}</p>
                   ) : (
                     <div className="text-center">
-                      <p className="text-sm font-bold text-white">{remainingScans} of 3 scans left today</p>
-                      {remainingScans === 0 && <p className="mt-0.5 text-[11px] text-white/50">Resets at midnight</p>}
+                      <p className="text-sm font-bold text-white">{t("camera.scansLeft", { count: remainingScans })}</p>
+                      {remainingScans === 0 && <p className="mt-0.5 text-[11px] text-white/50">{t("camera.resetsMidnight")}</p>}
                     </div>
                   )}
                 </motion.div>
 
                 <div className="mb-5 rounded-2xl border border-white/10 bg-white/10 p-3.5 backdrop-blur-md">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Pickly Now first</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">{t("camera.picklyNowFirst")}</p>
                   <p className="mt-1 text-[12px] leading-relaxed text-white/60">
-                    Every scan starts fast with Pickly Now. After your score lands, tap{" "}
-                    <span className="font-semibold text-white/85">Full Analysis</span> on the result screen whenever you want Pickly Deep detail on the same photo.
+                    <Trans
+                      i18nKey="camera.picklyNowDesc"
+                      components={{
+                        1: <span className="font-semibold text-white/85" />,
+                      }}
+                    />
                   </p>
                 </div>
 
@@ -843,7 +848,7 @@ export default function CameraPage() {
 
                 {isLimitReached && !error && (
                   <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-500/20 px-4 py-3">
-                    <p className="text-sm text-amber-100">Daily limit reached. Try again tomorrow!</p>
+                    <p className="text-sm text-amber-100">{t("camera.dailyLimit")}</p>
                   </div>
                 )}
 
@@ -853,12 +858,12 @@ export default function CameraPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.3, ease }}
                     whileTap={{ scale: 0.97 }}
-                    onClick={handleUploadClick}
+                    onClick={handleCameraClick}
                     disabled={isButtonDisabled}
                     className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#697254] py-4 text-[15px] font-semibold text-[#EFE5D8] shadow-lg transition-all duration-200 disabled:opacity-40"
                   >
                     <Camera className="h-5 w-5" />
-                    Take a Photo
+                    {t("camera.takePhoto")}
                   </motion.button>
 
                   <motion.button
@@ -866,19 +871,19 @@ export default function CameraPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.38, ease }}
                     whileTap={{ scale: 0.97 }}
-                    onClick={handleUploadClick}
+                    onClick={handleGalleryClick}
                     disabled={isButtonDisabled}
                     className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-white/25 bg-white/10 py-4 text-[15px] font-semibold text-white backdrop-blur-md transition-all duration-200 hover:bg-white/20 disabled:opacity-40"
                   >
                     {isScanning ? (
                       <>
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Analyzing...
+                        {t("camera.analyzing")}
                       </>
                     ) : (
                       <>
                         <Upload className="h-5 w-5" />
-                        Upload Photo
+                        {t("camera.uploadPhoto")}
                       </>
                     )}
                   </motion.button>
@@ -905,13 +910,19 @@ export default function CameraPage() {
             </div>
 
             <input
-              ref={fileInputRef}
+              ref={cameraInputRef}
               type="file"
               accept="image/*"
               capture="environment"
               className="hidden"
               onChange={handleFileSelect}
-              multiple={false}
+            />
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileSelect}
             />
           </div>
         ) : (
@@ -978,7 +989,7 @@ export default function CameraPage() {
                 </svg>
               </button>
               <Image
-                src="/images/7e0b2a05-a68c-4167-b2ba-c937d73c7000.png"
+                src="/images/pickly-newlogov2.png"
                 alt="Pickly"
                 width={30}
                 height={30}
@@ -1181,7 +1192,7 @@ export default function CameraPage() {
                         brand={priceSearchProduct.brand}
                         category={priceSearchProduct.category}
                         fullTitle={priceSearchProduct.fullTitle}
-                        locale={user?.profile?.locale === "tr" ? "tr" : clientLocale()}
+                        locale={getAppLocale()}
                       />
                     </motion.div>
                   )}
@@ -1217,12 +1228,15 @@ export default function CameraPage() {
                     </Card>
                   </motion.div>
 
-                  <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.42, delay: 0.08, ease }}
-                  >
-                    <Card className={`rounded-[28px] border shadow-none ${similarityToneClasses[viewModel.shelfSimilarity.tone]}`}>
+                  {viewModel.shelfSimilarity && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.42, delay: 0.08, ease }}
+                    >
+                      <Card
+                        className={`rounded-[28px] border shadow-none ${similarityToneClasses[viewModel.shelfSimilarity.tone]}`}
+                      >
                       <CardContent className="p-5">
                         <div className="flex items-start gap-3">
                           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/65">
@@ -1230,12 +1244,18 @@ export default function CameraPage() {
                           </div>
                           <div>
                             <p className="text-lg font-bold">{viewModel.shelfSimilarity.title}</p>
+                            {viewModel.shelfSimilarity.matchedProductName && (
+                              <p className="mt-1 text-[12px] font-semibold text-[#2D2D2D]/70">
+                                {viewModel.shelfSimilarity.matchedProductName}
+                              </p>
+                            )}
                             <p className="mt-2 text-[13px] leading-relaxed">{viewModel.shelfSimilarity.message}</p>
                           </div>
                         </div>
                       </CardContent>
-                    </Card>
-                  </motion.div>
+                      </Card>
+                    </motion.div>
+                  )}
 
                   <motion.div
                     ref={routineFitRef}

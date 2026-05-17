@@ -51,7 +51,7 @@ export function buildSystemPrompt(depth: AnalyzeRequestMode): string {
 PICKLY NOW (fast lane):
 - Fill EVERY JSON key so the backend can trim fields for speed mode.
 - Keep personalized_why to at most 4 concise bullets (still consequence-focused).
-- shelf_match may be null if nothing clearly overlaps shelf snapshot.
+- shelf_match: set found=false (or null) when nothing clearly overlaps the user's shelf snapshot — do not invent overlap.
 `
   }
 

@@ -77,7 +77,7 @@ export default function OnboardingShoppingStylePage() {
         </button>
         <div className="flex flex-1 items-center justify-center pr-9">
           <Image
-            src="/images/7e0b2a05-a68c-4167-b2ba-c937d73c7000.png"
+            src="/images/pickly-newlogov2.png"
             alt="Pickly"
             width={32}
             height={32}

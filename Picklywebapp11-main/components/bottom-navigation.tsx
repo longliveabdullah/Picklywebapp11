@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "react-i18next"
 import { useAuth } from "@/contexts/auth-context"
 import {
   NavCamera,
@@ -16,17 +17,18 @@ const ACTIVE_COLOR = "#697254"
 const INACTIVE_COLOR = "rgba(105,114,84,0.45)"
 
 const navItems = [
-  { label: "Home", href: "/home", Icon: NavHome },
-  { label: "Circles", href: "/community", Icon: NavCommunity },
-  { label: "Scan", href: "/camera", isCenter: true, Icon: NavCamera },
-  { label: "History", href: "/history", Icon: NavHistory },
-  { label: "Profile", href: "/profile", Icon: NavProfile },
-]
+  { labelKey: "nav.home", href: "/home", Icon: NavHome },
+  { labelKey: "nav.circles", href: "/community", Icon: NavCommunity },
+  { labelKey: "nav.scan", href: "/camera", isCenter: true, Icon: NavCamera },
+  { labelKey: "nav.history", href: "/history", Icon: NavHistory },
+  { labelKey: "nav.profile", href: "/profile", Icon: NavProfile },
+] as const
 
 export function BottomNavigation() {
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
+  const { t } = useTranslation()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -91,7 +93,7 @@ export function BottomNavigation() {
                     isActive ? "text-[#697254]" : "text-[#697254]/45",
                   )}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </span>
               </button>
             )

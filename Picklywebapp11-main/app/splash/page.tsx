@@ -68,7 +68,7 @@ export default function SplashPage() {
           }}
         >
           <Image
-            src="/images/7e0b2a05-a68c-4167-b2ba-c937d73c7000.png"
+            src="/images/pickly-newlogov2.png"
             alt="Pickly"
             width={120}
             height={120}

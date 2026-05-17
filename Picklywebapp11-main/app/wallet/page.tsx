@@ -4,8 +4,10 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import ProtectedRoute from "@/components/protected-route"
+import { NotificationsSheet } from "@/components/notifications-sheet"
 import { deriveWalletData } from "@/lib/pickly-mock-data"
 import { useSharedShelf } from "@/hooks/use-shared-shelf"
+import { useSharedRoutine } from "@/hooks/use-shared-routine"
 
 const ease = [0.22, 1, 0.36, 1] as const
 
@@ -55,7 +57,9 @@ function EcoRing({ score }: { score: number }) {
 export default function WalletPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<"overview" | "purchases">("overview")
+  const [notificationSheetOpen, setNotificationSheetOpen] = useState(false)
   const { products } = useSharedShelf()
+  const { routine } = useSharedRoutine()
   const { monthlySpend, lastMonthDiff, cleanScore, savedAmount, breakdownData, recentPurchases } = useMemo(
     () => deriveWalletData(products),
     [products],
@@ -80,7 +84,12 @@ export default function WalletPage() {
             </svg>
           </button>
           <h1 className="text-lg font-bold text-[#2D2D2D]">Pickly</h1>
-          <button className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[#92735C]/10">
+          <button
+            type="button"
+            onClick={() => setNotificationSheetOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[#92735C]/10"
+            aria-label="Notifications"
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#697254" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 01-3.46 0" />
@@ -392,6 +401,13 @@ export default function WalletPage() {
           </div>
         )}
       </div>
+
+      <NotificationsSheet
+        open={notificationSheetOpen}
+        onOpenChange={setNotificationSheetOpen}
+        hasRoutine={routine.am.length + routine.pm.length > 0}
+        onBuildRoutine={() => router.push("/home")}
+      />
     </ProtectedRoute>
   )
 }

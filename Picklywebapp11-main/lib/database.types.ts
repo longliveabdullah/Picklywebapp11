@@ -11,8 +11,8 @@ export interface Database {
       }
       user_profiles: {
         Row: {
-          id: string; user_id: string; display_name: string | null; bio: string | null; avatar_url: string | null; age: number | null; gender: string | null
-          height: number | null; weight: number | null; has_diabetes: boolean
+          id: string; user_id: string; display_name: string | null; bio: string | null; avatar_url: string | null
+          has_diabetes: boolean
           allergies: string[] | null; skin_type: string | null; skin_tone: string | null
           skin_concerns: string[] | null; scalp_type: string | null; hair_conditions: string[] | null
           hair_type: string | null; goals: string[] | null; vegan: boolean | null
@@ -20,8 +20,8 @@ export interface Database {
           purchase_priorities: string[] | null; created_at: string; updated_at: string
         }
         Insert: {
-          id?: string; user_id: string; display_name?: string | null; bio?: string | null; avatar_url?: string | null; age?: number | null; gender?: string | null
-          height?: number | null; weight?: number | null; has_diabetes?: boolean
+          id?: string; user_id: string; display_name?: string | null; bio?: string | null; avatar_url?: string | null
+          has_diabetes?: boolean
           allergies?: string[] | null; skin_type?: string | null; skin_tone?: string | null
           skin_concerns?: string[] | null; scalp_type?: string | null; hair_conditions?: string[] | null
           hair_type?: string | null; goals?: string[] | null; vegan?: boolean | null
@@ -29,8 +29,8 @@ export interface Database {
           purchase_priorities?: string[] | null; created_at?: string; updated_at?: string
         }
         Update: {
-          id?: string; user_id?: string; display_name?: string | null; bio?: string | null; avatar_url?: string | null; age?: number | null; gender?: string | null
-          height?: number | null; weight?: number | null; has_diabetes?: boolean
+          id?: string; user_id?: string; display_name?: string | null; bio?: string | null; avatar_url?: string | null
+          has_diabetes?: boolean
           allergies?: string[] | null; skin_type?: string | null; skin_tone?: string | null
           skin_concerns?: string[] | null; scalp_type?: string | null; hair_conditions?: string[] | null
           hair_type?: string | null; goals?: string[] | null; vegan?: boolean | null

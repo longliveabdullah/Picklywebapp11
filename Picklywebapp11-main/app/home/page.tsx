@@ -3,9 +3,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { Trans, useTranslation } from "react-i18next"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { PicklyAssistantCard } from "@/components/pickly-assistant-card"
 import { RoutineBuilderCard } from "@/components/routine-builder-card"
+import { NotificationsSheet } from "@/components/notifications-sheet"
 import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
 import { categoryMeta, formatDate, getProductStatus, type SharedShelfProduct } from "@/lib/pickly-mock-data"
@@ -19,10 +21,12 @@ const ease = [0.22, 1, 0.36, 1] as const
 
 export default function HomePage() {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const router = useRouter()
   const [previewProduct, setPreviewProduct] = useState<SharedShelfProduct | null>(null)
   const [routinePeriod, setRoutinePeriod] = useState<"am" | "pm">("am")
   const [routineSheetOpen, setRoutineSheetOpen] = useState(false)
+  const [notificationSheetOpen, setNotificationSheetOpen] = useState(false)
   const { products: shelfProducts, shelfReady } = useSharedShelf()
   const { routine, changeStepProduct, addStep, removeStep } = useSharedRoutineWithProducts(shelfProducts, shelfReady)
 
@@ -43,12 +47,17 @@ export default function HomePage() {
           {/* Greeting */}
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-semibold text-[#2D2D2D]">
-              Hi, {displayName}!
+              {t("home.greeting", { name: displayName })}
             </p>
           </div>
 
           {/* Notification */}
-          <button className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[#92735C]/10">
+          <button
+            type="button"
+            onClick={() => setNotificationSheetOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[#92735C]/10"
+            aria-label={t("common.notifications")}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#697254" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 01-3.46 0" />
@@ -75,7 +84,7 @@ export default function HomePage() {
             transition={{ duration: 0.4, delay: 0.1, ease }}
             className="mb-3 px-5 text-xl font-bold text-[#2D2D2D]"
           >
-            Explore
+            {t("home.explore")}
           </motion.h2>
 
           <motion.div
@@ -99,9 +108,9 @@ export default function HomePage() {
                   <rect x="7" y="7" width="10" height="10" rx="1"/>
                 </svg>
               </div>
-              <p className="text-[14px] font-bold text-[#2D2D2D]">Scanner</p>
+              <p className="text-[14px] font-bold text-[#2D2D2D]">{t("home.scanner")}</p>
               <p className="mt-1 text-[11px] leading-relaxed text-[#697254]/70">
-                Identify clean beauty ingredients instantly.
+                {t("home.scannerDesc")}
               </p>
             </button>
 
@@ -118,9 +127,9 @@ export default function HomePage() {
                   <path d="M14 16h4"/>
                 </svg>
               </div>
-              <p className="text-[14px] font-bold text-[#2D2D2D]">Pickly Wallet</p>
+              <p className="text-[14px] font-bold text-[#2D2D2D]">{t("home.wallet")}</p>
               <p className="mt-1 text-[11px] leading-relaxed text-[#92735C]/70">
-                Track your beauty spending &amp; budget smarter.
+                {t("home.walletDesc")}
               </p>
             </button>
 
@@ -138,9 +147,9 @@ export default function HomePage() {
                   <path d="M10 15h4" strokeDasharray="2 2"/>
                 </svg>
               </div>
-              <p className="text-[14px] font-bold text-[#2D2D2D]">Compare</p>
+              <p className="text-[14px] font-bold text-[#2D2D2D]">{t("home.compare")}</p>
               <p className="mt-1 text-[11px] leading-relaxed text-[#697254]/70">
-                Put two products side by side &amp; pick the best.
+                {t("home.compareDesc")}
               </p>
             </button>
 
@@ -157,9 +166,9 @@ export default function HomePage() {
                   <path d="M8 11h5"/>
                 </svg>
               </div>
-              <p className="text-[14px] font-bold text-[#2D2D2D]">My Shelf</p>
+              <p className="text-[14px] font-bold text-[#2D2D2D]">{t("home.myShelfCard")}</p>
               <p className="mt-1 text-[11px] leading-relaxed text-[#92735C]/70">
-                Your personal collection of saved products.
+                {t("home.myShelfCardDesc")}
               </p>
             </button>
           </motion.div>
@@ -182,9 +191,9 @@ export default function HomePage() {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[15px] font-bold text-[#2D2D2D]">Build My Routine</p>
+                <p className="text-[15px] font-bold text-[#2D2D2D]">{t("home.buildRoutine")}</p>
                 <p className="mt-1 text-[12px] leading-relaxed text-[#92735C]/70">
-                  Curate your AM and PM steps using products already saved in your shelf.
+                  {t("home.buildRoutineDesc")}
                 </p>
               </div>
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#697254]/10">
@@ -197,13 +206,13 @@ export default function HomePage() {
 
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="rounded-full bg-[#697254]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#697254]">
-                AM {routine.am.length} steps
+                {t("home.amSteps", { count: routine.am.length })}
               </span>
               <span className="rounded-full bg-[#92735C]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#92735C]">
-                PM {routine.pm.length} steps
+                {t("home.pmSteps", { count: routine.pm.length })}
               </span>
               <span className="rounded-full bg-[#A7AD89]/15 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#697254]">
-                Shelf Powered
+                {t("home.shelfPowered")}
               </span>
             </div>
           </button>
@@ -217,7 +226,7 @@ export default function HomePage() {
             transition={{ duration: 0.4, delay: 0.2, ease }}
             className="mb-3 flex items-center justify-between px-5"
           >
-            <h2 className="text-xl font-bold text-[#2D2D2D]">My Shelf</h2>
+            <h2 className="text-xl font-bold text-[#2D2D2D]">{t("home.myShelf")}</h2>
             <button onClick={() => router.push("/products?add=true")} className="flex h-8 w-8 items-center justify-center rounded-full bg-[#697254] shadow-sm">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
                 <path d="M8 3v10"/>
@@ -235,11 +244,18 @@ export default function HomePage() {
           >
             {shelfProducts.length === 0 ? (
               <p className="py-2 text-[13px] leading-relaxed text-[#92735C]/75">
-                Your shelf is empty. Add items from{" "}
-                <button type="button" className="font-semibold text-[#697254] underline" onClick={() => router.push("/products?add=true")}>
-                  My Shelf
-                </button>{" "}
-                or save a scan.
+                <Trans
+                  i18nKey="home.emptyShelf"
+                  components={{
+                    1: (
+                      <button
+                        type="button"
+                        className="font-semibold text-[#697254] underline"
+                        onClick={() => router.push("/products?add=true")}
+                      />
+                    ),
+                  }}
+                />
               </p>
             ) : (
               shelfProducts.map((product) => {
@@ -353,28 +369,28 @@ export default function HomePage() {
                       <span className={`rounded-full px-3 py-1 text-xs font-bold ${
                         previewProduct.status === "opened" ? "bg-[#B69C85]/15 text-[#92735C]" : "bg-[#697254]/10 text-[#697254]"
                       }`}>
-                        {previewProduct.status === "opened" ? "Opened" : "Sealed"}
+                        {previewProduct.status === "opened" ? t("home.opened") : t("home.sealed")}
                       </span>
                     </div>
 
                     {/* Info grid */}
                     <div className="mb-5 grid grid-cols-2 gap-3">
                       <div className="rounded-2xl bg-white p-3.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92735C]/50">Expiry Date</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92735C]/50">{t("home.expiryDate")}</p>
                         <p className="mt-1 text-sm font-bold text-[#2D2D2D]">{formatDate(previewProduct.expiry_date)}</p>
                       </div>
                       <div className="rounded-2xl bg-white p-3.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92735C]/50">Added On</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92735C]/50">{t("home.addedOn")}</p>
                         <p className="mt-1 text-sm font-bold text-[#2D2D2D]">{formatDate(previewProduct.created_at)}</p>
                       </div>
                       <div className="rounded-2xl bg-white p-3.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92735C]/50">PAO</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92735C]/50">{t("home.pao")}</p>
                         <p className="mt-1 text-sm font-bold text-[#2D2D2D]">
                           {previewProduct.period_after_opening ? `${previewProduct.period_after_opening}M` : "—"}
                         </p>
                       </div>
                       <div className="rounded-2xl bg-white p-3.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92735C]/50">Opened Date</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92735C]/50">{t("home.openedDate")}</p>
                         <p className="mt-1 text-sm font-bold text-[#2D2D2D]">{formatDate(previewProduct.opened_date)}</p>
                       </div>
                     </div>
@@ -383,9 +399,9 @@ export default function HomePage() {
                     {paoUsed && (
                       <div className="mb-5 rounded-2xl bg-white p-4">
                         <div className="mb-2 flex items-center justify-between">
-                          <p className="text-xs font-semibold text-[#2D2D2D]">Usage Timeline</p>
+                          <p className="text-xs font-semibold text-[#2D2D2D]">{t("home.usageTimeline")}</p>
                           <p className="text-xs font-bold" style={{ color: paoUsed.pct >= 80 ? "#C45B4A" : "#697254" }}>
-                            {paoUsed.used} of {paoUsed.total} months
+                            {t("home.monthsUsed", { used: paoUsed.used, total: paoUsed.total })}
                           </p>
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-[#DBD0C4]/40">
@@ -406,13 +422,13 @@ export default function HomePage() {
                         onClick={() => { setPreviewProduct(null); router.push("/products") }}
                         className="flex-1 rounded-2xl bg-[#697254] py-3.5 text-center text-sm font-semibold text-[#EFE5D8] shadow-md"
                       >
-                        View on Shelf
+                        {t("home.viewOnShelf")}
                       </button>
                       <button
                         onClick={() => setPreviewProduct(null)}
                         className="flex-1 rounded-2xl py-3.5 text-center text-sm font-semibold text-[#3D3D3D] ring-1 ring-[#DBD0C4]"
                       >
-                        Close
+                        {t("common.close")}
                       </button>
                     </div>
                   </div>
@@ -422,14 +438,21 @@ export default function HomePage() {
           })()}
         </AnimatePresence>
 
+        <NotificationsSheet
+          open={notificationSheetOpen}
+          onOpenChange={setNotificationSheetOpen}
+          hasRoutine={routine.am.length + routine.pm.length > 0}
+          onBuildRoutine={() => setRoutineSheetOpen(true)}
+        />
+
         <Sheet open={routineSheetOpen} onOpenChange={setRoutineSheetOpen}>
           <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-3xl bg-[#F5EFE6] pb-10">
             <SheetHeader className="mb-5">
-              <SheetTitle className="text-lg font-bold text-[#2D2D2D]">Routine Builder</SheetTitle>
+              <SheetTitle className="text-lg font-bold text-[#2D2D2D]">{t("home.routineBuilder")}</SheetTitle>
             </SheetHeader>
             {!shelfReady ? (
               <p className="rounded-2xl bg-white/80 px-4 py-6 text-center text-[13px] leading-relaxed text-[#92735C]/80">
-                Loading your shelf…
+                {t("home.loadingShelf")}
               </p>
             ) : (
               <RoutineBuilderCard

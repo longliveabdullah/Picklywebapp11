@@ -11,10 +11,6 @@ export type UserProfile = {
   displayName?: string
   bio?: string
   avatarUrl?: string
-  age?: number
-  gender?: "male" | "female" | "other" | "prefer-not-to-say"
-  height?: number // in cm
-  weight?: number // in kg
   hasDiabetes?: boolean
   vegan?: boolean
   allergies?: string[]

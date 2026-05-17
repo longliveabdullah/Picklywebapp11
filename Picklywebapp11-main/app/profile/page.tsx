@@ -98,7 +98,6 @@ const hairGoalOptions = [
 ]
 
 const formSchema = z.object({
-  gender: z.enum(["male", "female", "other", "prefer-not-to-say"]).optional(),
   vegan: z.boolean().optional(),
   allergies: z.string().optional(),
   skinType: z.enum(["normal", "oily", "dry", "combination", "sensitive"]).optional(),
@@ -233,7 +232,6 @@ export default function ProfilePage() {
   const { handleSubmit, setValue, watch } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      gender: user?.profile.gender,
       vegan: user?.profile.vegan || false,
       allergies: user?.profile.allergies?.join(", ") || "",
       skinType: user?.profile.skinType,
@@ -363,10 +361,6 @@ export default function ProfilePage() {
     try {
       setIsLoading(true)
       const updatedProfile: UserProfile = {
-        age: user?.profile.age,
-        gender: data.gender,
-        height: user?.profile.height,
-        weight: user?.profile.weight,
         hasDiabetes: user?.profile.hasDiabetes,
         vegan: data.vegan,
         allergies: data.allergies ? data.allergies.split(",").map((a) => a.trim()) : user?.profile.allergies || [],

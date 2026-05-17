@@ -27,10 +27,11 @@ type ScanResultAction = {
   emphasis: "primary" | "secondary"
 }
 
-type ShelfSimilarity = {
+export type ShelfSimilarity = {
   title: string
   message: string
   tone: "positive" | "caution" | "neutral"
+  matchedProductName?: string
 }
 
 type RoutineTimelineItem = {
@@ -73,7 +74,7 @@ export type ScanResultViewModel = {
   productName: string
   categoryLabel: string
   personalizedReasons: string[]
-  shelfSimilarity: ShelfSimilarity
+  shelfSimilarity: ShelfSimilarity | null
   routineFit: RoutineFitInsight
   profileUsage: ProfileUsage
   evidenceSummary: string
@@ -171,7 +172,39 @@ function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)))
 }
 
+function mapApiCategoryToShelf(category: string | undefined | null): ShelfCategory | null {
+  const value = normalize(category)
+  if (!value) return null
+  if (/(skin|skincare|face|facial)/.test(value)) return "skin"
+  if (/(makeup|cosmetic|lip|eye|foundation)/.test(value)) return "makeup"
+  if (/(hair|scalp|shampoo)/.test(value)) return "hair"
+  if (/(body|deodorant|wash)/.test(value)) return "body"
+  if (/(fragrance|perfume|cologne)/.test(value)) return "fragrance"
+  return null
+}
+
 function inferProductMeta(productRating: ProductRating): InferredProductMeta {
+  const apiCategory = mapApiCategoryToShelf(productRating.picklyEnvelope?.result.category)
+  if (apiCategory) {
+    const base = {
+      category: apiCategory,
+      categoryLabel: categoryLabelMap[apiCategory],
+    } as const
+
+    if (apiCategory === "fragrance") {
+      return { ...base, primaryPeriod: "am" as const, periodLabel: "AM / PM" as const }
+    }
+    if (apiCategory === "makeup") {
+      return { ...base, primaryPeriod: "am" as const, periodLabel: "AM" as const }
+    }
+    if (apiCategory === "hair") {
+      return { ...base, primaryPeriod: "pm" as const, periodLabel: "AM / PM" as const }
+    }
+    if (apiCategory === "body") {
+      return { ...base, primaryPeriod: "am" as const, periodLabel: "AM / PM" as const }
+    }
+  }
+
   const productText = [
     productRating.productName,
     productRating.explanation,
@@ -342,7 +375,6 @@ function buildProfileUsage(profile?: UserProfile): ProfileUsage {
     ["Allergies", !!profile?.allergies?.length],
     ["Goals", !!profile?.goals?.length],
     ["Vegan Preference", !!profile?.vegan],
-    ["Age", !!profile?.age],
     ["Diabetes", profile?.hasDiabetes !== undefined],
   ]
 
@@ -432,51 +464,48 @@ function buildShelfSimilarity(
   productName: string,
   inferredProduct: InferredProductMeta,
   shelfProducts: SharedShelfProduct[],
-): ShelfSimilarity {
+): ShelfSimilarity | null {
   const apiShelf = productRating.picklyEnvelope?.result.shelf_match
-  if (apiShelf?.found && apiShelf.relationship) {
-    const suffix = apiShelf.product_name ? ` Related shelf item: ${apiShelf.product_name}.` : ""
+  if (apiShelf) {
+    if (!apiShelf.found) return null
+    if (!apiShelf.relationship?.trim()) return null
+
     return {
       title: "Shelf Match",
-      message: `${apiShelf.relationship}${suffix}`,
-      tone: /risk|overload|duplicate|conflict/i.test(apiShelf.relationship) ? "caution" : "neutral",
+      message: apiShelf.relationship.trim(),
+      tone: /risk|overload|duplicate|conflict|redundant/i.test(apiShelf.relationship) ? "caution" : "neutral",
+      matchedProductName: apiShelf.product_name ?? undefined,
     }
   }
+
+  if (shelfProducts.length === 0) return null
 
   const normalizedName = normalize(productName)
   const exactMatch = shelfProducts.find((product) => normalize(product.product_name) === normalizedName)
 
   if (exactMatch) {
     return {
-      title: "Shelf Similarity",
+      title: "Shelf Match",
       message: `You already have ${exactMatch.product_name} on your shelf, so this scan is more of a reconfirmation than a new discovery.`,
       tone: "positive",
+      matchedProductName: exactMatch.product_name,
     }
   }
 
-  const sameRoutine = shelfProducts.filter((product) => inferredProduct.routineType && product.routine_type === inferredProduct.routineType)
-  if (sameRoutine.length >= 2 && inferredProduct.routineLabel) {
-    return {
-      title: "Shelf Similarity",
-      message: `You already own ${sameRoutine.length} products that cover the ${inferredProduct.routineLabel.toLowerCase()} slot, so adding this may be redundant unless it clearly outperforms them.`,
-      tone: "caution",
+  if (inferredProduct.routineType) {
+    const sameRoutine = shelfProducts.filter((product) => product.routine_type === inferredProduct.routineType)
+    if (sameRoutine.length >= 2 && inferredProduct.routineLabel) {
+      const names = sameRoutine.slice(0, 2).map((product) => product.product_name)
+      return {
+        title: "Shelf Match",
+        message: `You already own ${names.join(" and ")} for your ${inferredProduct.routineLabel.toLowerCase()} step, so adding this may be redundant unless it clearly outperforms them.`,
+        tone: "caution",
+        matchedProductName: sameRoutine[0]?.product_name,
+      }
     }
   }
 
-  const sameCategory = shelfProducts.find((product) => product.category === inferredProduct.category)
-  if (sameCategory) {
-    return {
-      title: "Shelf Similarity",
-      message: `You already have ${sameCategory.product_name} on your shelf, and this scan looks close in category and function.`,
-      tone: "neutral",
-    }
-  }
-
-  return {
-    title: "Shelf Similarity",
-    message: "Nothing close on your shelf yet, so this could fill a genuinely new role in your lineup.",
-    tone: "positive",
-  }
+  return null
 }
 
 function buildRoutineFit(
@@ -487,13 +516,11 @@ function buildRoutineFit(
 ): RoutineFitInsight {
   const apiRoutine = productRating.picklyEnvelope?.result.routine_fit
   if (apiRoutine?.slot) {
+    const conflictCopy = apiRoutine.conflicts.filter(Boolean).join(" ").trim()
     return {
       title: "Routine Fit",
       slotLabel: apiRoutine.slot,
-      message:
-        apiRoutine.conflicts.length > 0
-          ? apiRoutine.conflicts.join(" ")
-          : `Pickly mapped this toward ${apiRoutine.slot} based on your routine snapshot.`,
+      message: conflictCopy || `Pickly mapped this toward ${apiRoutine.slot} based on your saved routine.`,
       timeline: [],
     }
   }
@@ -507,8 +534,20 @@ function buildRoutineFit(
     }
   }
 
+  const periodSteps = routine[inferredProduct.primaryPeriod]
+  const hasRoutineSnapshot = periodSteps.length > 0 && shelfProducts.length > 0
+
+  if (!hasRoutineSnapshot) {
+    return {
+      title: "Routine Fit",
+      slotLabel: `${inferredProduct.periodLabel} ${inferredProduct.routineLabel}`,
+      message: `Best used as your ${inferredProduct.periodLabel.toLowerCase()} ${inferredProduct.routineLabel?.toLowerCase()}. Add products to My Shelf and build your routine to see how this slots in.`,
+      timeline: [],
+    }
+  }
+
   const timeline = routineOrder.map((type) => {
-    const matchedStep = routine[inferredProduct.primaryPeriod].find((step) => step.type === type)
+    const matchedStep = periodSteps.find((step) => step.type === type)
     const matchedProduct = matchedStep
       ? shelfProducts.find((product) => product.id === matchedStep.productId)
       : undefined

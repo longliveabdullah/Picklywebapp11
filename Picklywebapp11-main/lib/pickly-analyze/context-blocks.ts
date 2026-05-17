@@ -1,8 +1,6 @@
 import type { AnalyzeProductRequest } from "@/lib/pickly-analyze/schema"
 
 export type DbProfileShape = {
-  age: number | null
-  gender: string | null
   skin_type: string | null
   skin_tone: string | null
   skin_concerns: string[] | null
@@ -38,7 +36,6 @@ export function formatProfileBlock(profile: DbProfileShape | null): string {
     `Shopping style: ${profile.shopping_style ?? "unknown"}`,
     `Purchase priorities: ${profile.purchase_priorities?.join(", ") || "none listed"}`,
     `Interested categories: ${profile.categories?.join(", ") || "none listed"}`,
-    `Age / gender: ${profile.age ?? "?"} / ${profile.gender ?? "?"}`,
   ]
 
   return `PROFILE SNAPSHOT:\n${lines.join("\n")}`

@@ -74,10 +74,6 @@ export class DatabaseService {
       .upsert(
         {
           user_id: userId,
-          age: profile.age || null,
-          gender: profile.gender || null,
-          height: profile.height || null,
-          weight: profile.weight || null,
           has_diabetes: profile.hasDiabetes || false,
           allergies: profile.allergies || null,
           skin_type: profile.skinType || null,
@@ -124,10 +120,6 @@ export class DatabaseService {
       displayName: data.display_name?.trim() || undefined,
       bio: data.bio?.trim() || undefined,
       avatarUrl: data.avatar_url?.trim() || undefined,
-      age: data.age || undefined,
-      gender: (data.gender as UserProfile["gender"]) || undefined,
-      height: data.height || undefined,
-      weight: data.weight || undefined,
       hasDiabetes: data.has_diabetes,
       allergies: data.allergies || undefined,
       skinType: (data.skin_type as UserProfile["skinType"]) || undefined,
@@ -151,10 +143,6 @@ export class DatabaseService {
       .upsert(
         {
           user_id: userId,
-          age: profile.age || null,
-          gender: profile.gender || null,
-          height: profile.height || null,
-          weight: profile.weight || null,
           has_diabetes: profile.hasDiabetes || false,
           allergies: profile.allergies || null,
           skin_type: profile.skinType || null,

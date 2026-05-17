@@ -37,8 +37,6 @@ function coerceDbProfile(row: Record<string, unknown> | null): DbProfileShape | 
     Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : null
 
   return {
-    age: typeof row.age === "number" ? row.age : null,
-    gender: typeof row.gender === "string" ? row.gender : null,
     skin_type: typeof row.skin_type === "string" ? row.skin_type : null,
     skin_tone: typeof row.skin_tone === "string" ? row.skin_tone : null,
     skin_concerns: arr(row.skin_concerns),

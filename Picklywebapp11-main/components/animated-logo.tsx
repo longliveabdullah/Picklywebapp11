@@ -33,7 +33,7 @@ export function AnimatedLogo({ size = "lg" }: { size?: "sm" | "md" | "lg" | "xl"
         <div className="absolute inset-0 rounded-full bg-gradient-to-r from-pickly-pink via-pickly-purple to-pickly-blue opacity-20 blur-xl animate-pulse"></div>
         <div className="relative">
           <Image
-            src="/images/pickly.png"
+            src="/images/pickly-newlogov2.png"
             alt="Pickly Logo"
             width={sizes[size]}
             height={sizes[size]}

@@ -76,6 +76,7 @@ export const AnalyzeProductRequestSchema = z.object({
             product_name: z.string(),
             brand: z.string().optional(),
             category: z.string(),
+            routine_type: z.string().nullable().optional(),
           }),
         )
         .optional(),

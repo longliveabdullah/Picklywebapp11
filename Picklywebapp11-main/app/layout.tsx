@@ -3,17 +3,22 @@ import "./globals.css"
 import type { Metadata } from "next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
+import { I18nProvider } from "@/components/i18n-provider"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: "Pickly - Personalized Product Ratings",
-  description: "Get personalized AI-powered ratings for products based on your profile",
-  generator: "v0.dev",
+  applicationName: "Pickly",
+  title: {
+    default: "Pickly — personalized product picks",
+    template: "%s · Pickly",
+  },
+  description:
+    "Scan products, get AI suitability scores tailored to your profile, compare prices across retailers, and build your shelf and routines.",
   icons: {
-    icon: "/images/pickly.png",
-    shortcut: "/images/pickly.png",
-    apple: "/images/pickly.png",
+    icon: "/images/pickly-mark.png",
+    shortcut: "/images/pickly-mark.png",
+    apple: "/images/pickly-mark.png",
   },
 }
 
@@ -31,9 +36,11 @@ export default function RootLayout({
       <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light">
           <AuthProvider>
-            {children}
-            <BottomNavigation />
-            <Toaster />
+            <I18nProvider>
+              {children}
+              <BottomNavigation />
+              <Toaster />
+            </I18nProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

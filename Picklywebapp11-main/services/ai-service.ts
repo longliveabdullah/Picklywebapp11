@@ -1,3 +1,4 @@
+import { getAppLocale } from "@/lib/i18n"
 import type { ProductRating } from "@/types"
 import { mapEnvelopeToProductRating } from "@/lib/map-envelope-to-product-rating"
 import type { PicklyApiEnvelope } from "@/lib/pickly-analyze/schema"
@@ -18,7 +19,7 @@ export async function analyzeProduct(imageBase64: string, _userId: string): Prom
     body: JSON.stringify({
       imageBase64,
       mode: "in_store",
-      locale: typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("tr") ? "tr" : "en",
+      locale: getAppLocale(),
     }),
   })
 

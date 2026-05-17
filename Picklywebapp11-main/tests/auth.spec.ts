@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
@@ -12,7 +13,8 @@ async function acceptSignupAndOnboardingTerms(page: Page) {
 
 test.describe('Authentication', () => {
   const email = `testuser-${Date.now()}@example.com`;
-  const password = 'password123';
+  const password =
+    process.env.E2E_TEST_PASSWORD?.trim() || `Pw_${randomBytes(12).toString('base64url')}!`;
 
   test('should allow a user to sign up and see the onboarding page', async ({ page }) => {
     await page.goto('/signup');
