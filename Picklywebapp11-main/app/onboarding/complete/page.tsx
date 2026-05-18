@@ -1,13 +1,26 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { motion, useAnimate } from "framer-motion"
+import { motion, useAnimate, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import {
+  clearOnboardingProfileDraft,
+  getOnboardingProfileDraft,
+} from "@/lib/onboarding-profile-storage"
 
 const PALETTE = ["#A7AD89", "#8C916C", "#697254", "#B69C85", "#92735C", "#DBD0C4"]
+
+/** Minimum ms to show the celebration screen before navigating to /home */
+const MIN_DISPLAY_MS = 2800
+
+const SAVE_STEPS = [
+  "Saving your preferences…",
+  "Personalising your experience…",
+  "Almost ready…",
+]
 
 function FloatingOrbs() {
   const orbs = useMemo(() => {
@@ -38,7 +51,6 @@ function FloatingOrbs() {
             opacity: 0,
           }}
           animate={{
-            // Use viewport units — `window` is undefined during SSR/prerender (breaks Vercel build).
             y: [0, "-120vh"],
             x: [0, orb.drift],
             opacity: [0, orb.opacity, orb.opacity, 0],
@@ -58,58 +70,112 @@ function FloatingOrbs() {
 
 const ease = [0.22, 1, 0.36, 1] as const
 
+type SaveStatus = "saving" | "done" | "error"
+
 export default function OnboardingCompletePage() {
   const router = useRouter()
-  const { updateUser } = useAuth()
+  const { updateUser, user, loading } = useAuth()
   const { toast } = useToast()
   const [scope, animate] = useAnimate()
-  const [ready, setReady] = useState(false)
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saving")
+  const [stepIndex, setStepIndex] = useState(0)
+  const [minTimeUp, setMinTimeUp] = useState(false)
+  const [ringDone, setRingDone] = useState(false)
+  const saveErrorMsg = useRef<string | null>(null)
+
+  // ── Ring + check animation ────────────────────────────────────────────────
   useEffect(() => {
     const run = async () => {
       await animate(
         "#ring",
         { pathLength: 1, opacity: 1 },
-        { duration: 1, delay: 0.4, ease: "easeOut" }
+        { duration: 1, delay: 0.4, ease: "easeOut" },
       )
       await animate(
         "#check",
         { pathLength: 1, opacity: 1 },
-        { duration: 0.4, ease: "easeOut" }
+        { duration: 0.4, ease: "easeOut" },
       )
-      setReady(true)
+      setRingDone(true)
     }
     run()
   }, [animate])
 
-  const handleStart = async () => {
-    try {
-      await updateUser({ onboardingComplete: true })
-      router.push("/home")
-    } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Could not complete your onboarding. Please try again.",
-        variant: "destructive",
-      })
+  // ── Minimum display timer ─────────────────────────────────────────────────
+  useEffect(() => {
+    const t = setTimeout(() => setMinTimeUp(true), MIN_DISPLAY_MS)
+    return () => clearTimeout(t)
+  }, [])
+
+  // ── Cycle status messages while saving ───────────────────────────────────
+  useEffect(() => {
+    if (saveStatus !== "saving") return
+    const interval = setInterval(
+      () => setStepIndex((prev) => (prev + 1) % SAVE_STEPS.length),
+      900,
+    )
+    return () => clearInterval(interval)
+  }, [saveStatus])
+
+  // ── Save all onboarding data immediately in the background ────────────────
+  const runSave = async () => {
+    if (!user) {
+      saveErrorMsg.current = "You need to be signed in."
+      setSaveStatus("error")
+      return
     }
+    try {
+      const profileDraft = getOnboardingProfileDraft()
+      await updateUser({
+        onboardingComplete: true,
+        profile: { ...user.profile, ...profileDraft },
+      })
+      clearOnboardingProfileDraft()
+      setSaveStatus("done")
+    } catch (err) {
+      saveErrorMsg.current =
+        err instanceof Error ? err.message : "Could not save your profile."
+      setSaveStatus("error")
+    }
+  }
+
+  useEffect(() => {
+    // Wait until auth context has resolved before saving
+    if (loading) return
+    runSave()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
+
+  // ── Auto-navigate once animation floor + save are both done ──────────────
+  useEffect(() => {
+    if (minTimeUp && saveStatus === "done") {
+      router.replace("/home")
+    }
+  }, [minTimeUp, saveStatus, router])
+
+  // ── Error retry ───────────────────────────────────────────────────────────
+  const handleRetry = async () => {
+    setSaveStatus("saving")
+    saveErrorMsg.current = null
+    await runSave()
   }
 
   return (
     <div
       ref={scope}
-      className="flex min-h-[100dvh] flex-col items-center justify-center pb-8 pt-8"
+      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-5 pb-8 pt-8"
     >
       <FloatingOrbs />
 
-      {/* Logo + Success Ring */}
+      {/* Logo + success ring */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 18, delay: 0.1 }}
         className="relative mb-8"
       >
-        {/* Outer glow */}
+        {/* Glow pulse */}
         <motion.div
           className="absolute inset-0 rounded-full"
           initial={{ scale: 0.8, opacity: 0 }}
@@ -118,13 +184,8 @@ export default function OnboardingCompletePage() {
           style={{ backgroundColor: "#A7AD89" }}
         />
 
-        {/* Ring SVG */}
-        <svg
-          width="120"
-          height="120"
-          viewBox="0 0 120 120"
-          className="absolute -inset-2"
-        >
+        {/* Animated ring */}
+        <svg width="120" height="120" viewBox="0 0 120 120" className="absolute -inset-2">
           <motion.circle
             id="ring"
             cx="60"
@@ -152,7 +213,7 @@ export default function OnboardingCompletePage() {
           {/* Check badge */}
           <motion.div
             initial={{ scale: 0 }}
-            animate={ready ? { scale: 1 } : {}}
+            animate={ringDone ? { scale: 1 } : {}}
             transition={{ type: "spring", stiffness: 400, damping: 15 }}
             className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full bg-[#697254] shadow-md"
           >
@@ -178,7 +239,7 @@ export default function OnboardingCompletePage() {
         transition={{ duration: 0.6, delay: 0.9, ease }}
         className="mb-3 text-center text-[28px] font-bold leading-tight text-[#2D2D2D]"
       >
-        You're all set!
+        You&apos;re all set!
       </motion.h1>
 
       {/* Subtitle */}
@@ -188,7 +249,7 @@ export default function OnboardingCompletePage() {
         transition={{ duration: 0.55, delay: 1.1, ease }}
         className="mb-2 max-w-[280px] text-center text-[15px] leading-relaxed text-[#92735C]"
       >
-        Pickly is now personalized just for you. Smarter picks start now.
+        Pickly is now personalised just for you. Smarter picks start now.
       </motion.p>
 
       {/* Brand tagline */}
@@ -198,43 +259,77 @@ export default function OnboardingCompletePage() {
         transition={{ duration: 0.5, delay: 1.4 }}
         className="mb-10 text-center text-sm font-semibold text-[#A7AD89]"
       >
-        Don't just pick — Pickly.
+        Don&apos;t just pick — Pickly.
       </motion.p>
 
-      {/* CTA Button */}
-      <motion.button
-        initial={{ opacity: 0, y: 20 }}
+      {/* ── Dynamic status area ───────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, delay: 1.6, ease }}
-        whileTap={{ scale: 0.97 }}
-        onClick={handleStart}
-        className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#697254] py-4 text-base font-semibold text-[#EFE5D8] shadow-lg transition-shadow hover:shadow-xl"
+        transition={{ duration: 0.5, delay: 1.6, ease }}
+        className="flex min-h-[64px] w-full flex-col items-center justify-center gap-3"
       >
-        Start Exploring
-        <motion.svg
-          width="18"
-          height="18"
-          viewBox="0 0 20 20"
-          fill="none"
-          animate={{ x: [0, 4, 0] }}
-          transition={{ duration: 1.5, delay: 2.2, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <path d="M7 4L13 10L7 16" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-        </motion.svg>
-      </motion.button>
+        {saveStatus === "saving" && (
+          <>
+            {/* Spinner */}
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#697254]/30 border-t-[#697254]" />
 
-      {/* Footer dots */}
+            {/* Cycling message */}
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={stepIndex}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.3 }}
+                className="text-sm font-medium text-[#92735C]"
+              >
+                {SAVE_STEPS[stepIndex]}
+              </motion.p>
+            </AnimatePresence>
+          </>
+        )}
+
+        {saveStatus === "done" && (
+          <motion.p
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.35, ease }}
+            className="text-sm font-semibold text-[#697254]"
+          >
+            Taking you in…
+          </motion.p>
+        )}
+
+        {saveStatus === "error" && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease }}
+            className="flex flex-col items-center gap-3"
+          >
+            <p className="max-w-[260px] text-center text-sm text-red-500">
+              {saveErrorMsg.current ?? "Something went wrong. Please try again."}
+            </p>
+            <button
+              onClick={handleRetry}
+              className="rounded-xl bg-[#697254] px-6 py-2.5 text-sm font-semibold text-[#EFE5D8] shadow transition-opacity hover:opacity-90 active:opacity-75"
+            >
+              Try again
+            </button>
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Progress dots */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, delay: 1.8 }}
-        className="mt-6 flex items-center gap-2"
+        className="mt-8 flex items-center gap-2"
       >
         {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="h-2 w-2 rounded-full bg-[#697254]/20"
-          />
+          <div key={i} className="h-2 w-2 rounded-full bg-[#697254]/20" />
         ))}
         <div className="h-2.5 w-2.5 rounded-full bg-[#697254]" />
       </motion.div>

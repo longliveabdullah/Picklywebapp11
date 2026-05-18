@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from "@/contexts/auth-context"
+import { clearOnboardingProfileDraft } from "@/lib/onboarding-profile-storage"
 import { setOnboardingTermsAccepted } from "@/lib/onboarding-terms-storage"
 
 const ACCENT = "#697254"
@@ -18,6 +19,7 @@ export default function OnboardingTermsPage() {
 
   const handleContinue = () => {
     if (!user?.id || !agreed) return
+    clearOnboardingProfileDraft()
     setOnboardingTermsAccepted(user.id)
     router.push("/onboarding/age")
   }

@@ -15,14 +15,14 @@ type ScanHistoryRow = Database["public"]["Tables"]["scan_history"]["Row"]
 
 export class DatabaseService {
   // User operations
-  static async createUser(email: string, userId: string) {
+  static async createUser(email: string, userId: string, onboardingComplete = false) {
     const { data, error } = await supabase
       .from("users")
       .upsert(
         {
           id: userId,
           email,
-          onboarding_complete: false,
+          onboarding_complete: onboardingComplete,
           updated_at: new Date().toISOString(),
         },
         {
@@ -138,32 +138,34 @@ export class DatabaseService {
   }
 
   static async updateUserProfile(userId: string, profile: Partial<UserProfile>) {
+    const profileUpdate = {
+      user_id: userId,
+      ...(profile.hasDiabetes !== undefined ? { has_diabetes: profile.hasDiabetes } : {}),
+      ...(profile.allergies !== undefined ? { allergies: profile.allergies || null } : {}),
+      ...(profile.skinType !== undefined ? { skin_type: profile.skinType || null } : {}),
+      ...(profile.skinTone !== undefined ? { skin_tone: profile.skinTone || null } : {}),
+      ...(profile.skinConcerns !== undefined ? { skin_concerns: profile.skinConcerns || null } : {}),
+      ...(profile.scalpType !== undefined ? { scalp_type: profile.scalpType || null } : {}),
+      ...(profile.hairConditions !== undefined ? { hair_conditions: profile.hairConditions || null } : {}),
+      ...(profile.hairType !== undefined ? { hair_type: profile.hairType || null } : {}),
+      ...(profile.goals !== undefined ? { goals: profile.goals || null } : {}),
+      ...(profile.vegan !== undefined ? { vegan: profile.vegan } : {}),
+      ...(profile.categories !== undefined ? { categories: profile.categories || null } : {}),
+      ...(profile.shoppingStyle !== undefined ? { shopping_style: profile.shoppingStyle || null } : {}),
+      ...(profile.purchasePriorities !== undefined ? { purchase_priorities: profile.purchasePriorities || null } : {}),
+      ...(profile.locale !== undefined ? { locale: profile.locale || null } : {}),
+      ...(profile.displayName !== undefined
+        ? { display_name: profile.displayName.trim() || null }
+        : {}),
+      ...(profile.bio !== undefined ? { bio: profile.bio.trim() || null } : {}),
+      ...(profile.avatarUrl !== undefined ? { avatar_url: profile.avatarUrl.trim() || null } : {}),
+      updated_at: new Date().toISOString(),
+    }
+
     const { data, error } = await supabase
       .from("user_profiles")
       .upsert(
-        {
-          user_id: userId,
-          has_diabetes: profile.hasDiabetes || false,
-          allergies: profile.allergies || null,
-          skin_type: profile.skinType || null,
-          skin_tone: profile.skinTone || null,
-          skin_concerns: profile.skinConcerns || null,
-          scalp_type: profile.scalpType || null,
-          hair_conditions: profile.hairConditions || null,
-          hair_type: profile.hairType || null,
-          goals: profile.goals || null,
-          vegan: profile.vegan ?? null,
-          categories: profile.categories || null,
-          shopping_style: profile.shoppingStyle || null,
-          purchase_priorities: profile.purchasePriorities || null,
-          locale: profile.locale || null,
-          ...(profile.displayName !== undefined
-            ? { display_name: profile.displayName.trim() || null }
-            : {}),
-          ...(profile.bio !== undefined ? { bio: profile.bio.trim() || null } : {}),
-          ...(profile.avatarUrl !== undefined ? { avatar_url: profile.avatarUrl.trim() || null } : {}),
-          updated_at: new Date().toISOString(),
-        },
+        profileUpdate,
         {
           onConflict: "user_id",
         },

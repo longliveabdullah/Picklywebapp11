@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import { updateOnboardingProfileDraft } from "@/lib/onboarding-profile-storage"
 
 const priorities = [
   {
@@ -123,9 +124,15 @@ export default function OnboardingPrioritiesPage() {
 
   const togglePriority = (id: string) => {
     setSelected((prev) => {
-      if (prev.includes(id)) return prev.filter((p) => p !== id)
+      if (prev.includes(id)) {
+        const next = prev.filter((p) => p !== id)
+        updateOnboardingProfileDraft({ purchasePriorities: next })
+        return next
+      }
       if (prev.length >= MAX_SELECT) return prev
-      return [...prev, id]
+      const next = [...prev, id]
+      updateOnboardingProfileDraft({ purchasePriorities: next })
+      return next
     })
   }
 

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import { updateOnboardingProfileDraft } from "@/lib/onboarding-profile-storage"
 
 const categories = [
   {
@@ -79,9 +80,11 @@ export default function OnboardingCategoriesPage() {
   const [selected, setSelected] = useState<string[]>([])
 
   const toggleCategory = (id: string) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    )
+    setSelected((prev) => {
+      const next = prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+      updateOnboardingProfileDraft({ categories: next })
+      return next
+    })
   }
 
   const handleNext = () => {

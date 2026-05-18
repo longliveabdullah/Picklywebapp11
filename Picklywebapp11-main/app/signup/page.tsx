@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -31,6 +32,7 @@ const formSchema = z
   })
 
 export default function SignUpPage() {
+  const router = useRouter()
   const { signUp, loading } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -76,7 +78,18 @@ export default function SignUpPage() {
     setIsLoading(true)
     setError(null)
     try {
-      await signUp(data.email, data.password)
+      const { needsEmailConfirmation } = await signUp(data.email, data.password)
+
+      if (needsEmailConfirmation) {
+        toast({
+          title: "Check your email",
+          description:
+            "We sent you a confirmation link. Open it to verify your account, then sign in here.",
+        })
+        router.replace("/auth?registered=1")
+        return
+      }
+
       toast({
         title: "Account Created!",
         description: "Welcome to Pickly! Let's set up your profile.",

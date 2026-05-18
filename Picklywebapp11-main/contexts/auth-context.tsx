@@ -10,6 +10,7 @@ import {
   clearOnboardingTermsAcceptance,
   hasAcceptedOnboardingTerms,
 } from "@/lib/onboarding-terms-storage"
+import { clearOnboardingProfileDraft } from "@/lib/onboarding-profile-storage"
 import { logger } from "@/lib/utils"
 import type { User, ScanHistoryItem, UserProfile } from "@/types"
 import type { AuthError } from "@supabase/supabase-js"
@@ -19,7 +20,8 @@ type AuthContextType = {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string) => Promise<void>
+  /** When email confirmation is required in Supabase, there is no session until the user confirms — see `needsEmailConfirmation`. */
+  signUp: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
   updateUser: (updates: Partial<User>) => Promise<void>
@@ -172,12 +174,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      // Email confirmation is disabled in Supabase settings for this project
     })
     if (error) throw new Error(getAuthErrorMessage(error))
+
+    // With "Confirm email" enabled, Supabase creates the user but returns session: null — no SIGNED_IN event.
+    if (data.user && !data.session) {
+      return { needsEmailConfirmation: true }
+    }
+
+    // Ensure app user state updates even if onAuthStateChange is delayed (Strict Mode, listeners, etc.).
+    if (data.session?.user) {
+      await loadUserData(data.session.user)
+    }
+
+    return { needsEmailConfirmation: false }
   }
 
   const signInWithGoogle = async () => {
@@ -205,6 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /* ignore */
     }
     localStorage.removeItem(CACHED_USER_KEY)
+    clearOnboardingProfileDraft()
     const { error } = await supabase.auth.signOut()
     if (error) {
       logger.error("Sign out error:", error)
@@ -234,9 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const promises = []
       if (updates.onboardingComplete !== undefined) {
         promises.push(
-          DatabaseService.updateUser(user.id, {
-            onboarding_complete: updates.onboardingComplete,
-          }),
+          DatabaseService.createUser(user.email, user.id, updates.onboardingComplete),
         )
       }
       if (updates.profile) {

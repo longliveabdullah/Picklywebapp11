@@ -63,8 +63,8 @@ export default function LandingPage() {
           </div>
           <div className="flex-1 flex items-center justify-center md:justify-center pointer-events-none w-full max-w-[200px] sm:max-w-[240px] md:max-w-none ml-8 md:ml-0">
             <Image
-              src="/images/pickly-newlogov2.png"
-              alt="Pickly"
+              src="/images/undraw_happy-customer_white (1).svg"
+              alt="Happy Pickly customer"
               width={320}
               height={280}
               className="w-full max-w-[200px] sm:max-w-[260px] md:w-80 h-auto object-contain"

@@ -32,6 +32,7 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [infoBanner, setInfoBanner] = useState<string | null>(null)
 
   const {
     register,
@@ -52,6 +53,12 @@ export default function SignInPage() {
       setError("Authentication failed. Please try again.")
     } else if (authError === "callback_error") {
       setError("There was an error completing your sign in. Please try again.")
+    }
+
+    if (searchParams.get("registered") === "1") {
+      setInfoBanner(
+        "Check your inbox for a confirmation link if your project requires email verification. After confirming, sign in below.",
+      )
     }
   }, [searchParams])
 
@@ -107,6 +114,13 @@ export default function SignInPage() {
               Sign up
             </Link>
           </p>
+
+          {infoBanner && (
+            <Alert className="mt-6 border-[#697254]/30 bg-[#697254]/10 text-[#4a523a]">
+              <CheckCircle className="h-4 w-4 text-[#697254]" />
+              <AlertDescription>{infoBanner}</AlertDescription>
+            </Alert>
+          )}
 
           {error && (
             <Alert variant="destructive" className="mt-6">

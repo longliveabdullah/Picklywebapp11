@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Image from "next/image"
+import { updateOnboardingProfileDraft } from "@/lib/onboarding-profile-storage"
 
 const shoppingStyles = [
   {
@@ -51,6 +52,7 @@ export default function OnboardingShoppingStylePage() {
   const [selected, setSelected] = useState<string | null>(null)
 
   const handleNext = () => {
+    if (!selected) return
     router.push("/onboarding/complete")
   }
 
@@ -123,7 +125,10 @@ export default function OnboardingShoppingStylePage() {
               key={style.id}
               variants={itemVariants}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setSelected(style.id)}
+              onClick={() => {
+                setSelected(style.id)
+                updateOnboardingProfileDraft({ shoppingStyle: style.id })
+              }}
               className={`flex flex-1 items-center rounded-2xl px-5 text-left transition-all duration-200 ${
                 isSelected
                   ? "bg-white ring-2 ring-[#697254] shadow-md"
